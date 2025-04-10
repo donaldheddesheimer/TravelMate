@@ -12,3 +12,5 @@
 db.sqlite3
 .venv/
 .DS_Store
+.env
+.env

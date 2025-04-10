@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+  <div class="container d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="content-section shadow-lg p-4 bg-white rounded" style="max-width: 500px; width: 100%;">
+      <form method="POST" class="mb-4">  <!-- Added mb-4 for bottom margin -->
+        {% csrf_token %}
+        <fieldset class="form-group">
+          <legend class="border-bottom text-center custom-txt-gold">Join Today</legend>
+          <div class="mb-3">
+            {{ form|crispy }}
+          </div>
+        </fieldset>
+        <div class="form-group text-center">
+          <button class="btn custom-btn w-100 py-2" type="submit">Sign Up</button>
+        </div>
+      </form>
+      <div class="border-top pt-3 mt-4 text-center">  <!-- Added mt-4 for spacing above this section -->
+        <small class="text-muted">Already have an account?
+          <a class="text-decoration-none fw-bold text-primary" href="{%  url 'account.login' %}">Sign In</a>
+        </small>
+      </div>
+    </div>
+  </div>
+{% endblock %}
