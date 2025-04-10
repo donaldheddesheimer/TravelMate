@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your Trips - TravelMate{% endblock %}
+
+{% block content %}
+  <style>
+    .trip-list-container {
+  max-width: 800px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  color: white;
+}
+
+.trip-list {
+  list-style: none;
+  padding: 0;
+}
+
+.trip-card {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.create-trip-button {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1.2rem;
+  background: #ff7e5f;
+  color: white;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+}
+.create-trip-button:hover {
+  background: #ff5e62;
+}
+
+  </style>
+  <div class="trip-list-container">
+    <h1>Your Trips</h1>
+
+    <a href="{% url 'trips:create' %}" class="create-trip-button">+ Create New Trip</a>
+
+    {% if trips %}
+      <ul class="trip-list">
+        {% for trip in trips %}
+          <li class="trip-card">
+            <h3>{{ trip.destination }}</h3>
+            <p><strong>Leaving:</strong> {{ trip.date_leaving }}</p>
+            <p><strong>Returning:</strong> {{ trip.date_return }}</p>
+            <!-- Optional Edit/Delete -->
+            <!--
+            <a href="{% url 'trips:edit' trip.id %}">Edit</a>
+            <a href="{% url 'trips:delete' trip.id %}">Delete</a>
+            -->
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>You haven't created any trips yet.</p>
+    {% endif %}
+  </div>
+{% endblock %}
