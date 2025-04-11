@@ -624,3 +624,96 @@ body {
   background-color: #383838;
 }
 
+/* =============== Edit Profile Page Styles =============== */
+
+.edit-profile-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--color-neutral-900);
+  padding: 2rem;
+}
+
+.edit-profile-container {
+  background-color: var(--color-neutral-800);
+  color: var(--color-light);
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+}
+
+.profile-page-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--color-light);
+}
+
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Profile Picture Section */
+.profile-picture-section {
+  text-align: center;
+}
+
+.profile-pic {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--color-primary);
+  margin-bottom: 1rem;
+}
+
+.upload-field {
+  text-align: center;
+}
+
+/* Profile Details Section */
+.profile-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-details,
+.additional-details {
+  background-color: var(--color-neutral-100);
+  padding: 1rem;
+  border-radius: 4px;
+  color: var(--color-dark);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Submit Button Styling */
+.form-submit {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.profile-save-btn {
+  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.profile-save-btn:hover {
+  background: linear-gradient(135deg, #ff9966, #ff5e62);
+}
+
+

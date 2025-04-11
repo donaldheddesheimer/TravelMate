@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile - TravelMate{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+  <div class="login-container">
+    <form method="POST" class="login-form">
+      {% csrf_token %}
+      <fieldset class="form-group">
+        <legend class="login-title">Edit Profile</legend>
+        <div class="form-field">
+          {{ form|crispy }}
+        </div>
+      </fieldset>
+      <div class="form-submit">
+        <button class="login-btn" type="submit">Save Changes</button>
+      </div>
+    </form>
+    <div class="login-footer">
+      <small>
+        <a href="{% url 'accounts:profile' %}">Back to Profile</a>
+      </small>
+    </div>
+  </div>
+</div>
+{% endblock %}
