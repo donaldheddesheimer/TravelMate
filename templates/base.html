@@ -1,5 +1,4 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,8 +22,15 @@
         <a href="{% url 'home:index' %}">TravelMate</a>
       </div>
       <div class="navbar__buttons">
-        <a href="{% url 'accounts:login' %}" class="navbar__button">Login</a>
-        <a href="{% url 'trips:list' %}" class="navbar__button navbar__button--primary">View Trips</a>
+        {% if user.is_authenticated %}
+          <!-- If the user is authenticated, display Profile, View Trips, and Logout buttons -->
+          <a href="{% url 'accounts:profile' %}" class="navbar__button">Profile</a>
+          <a href="{% url 'trips:list' %}" class="navbar__button">View Trips</a>
+          <a href="{% url 'accounts:logout' %}" class="navbar__button navbar__button--primary">Logout</a>
+        {% else %}
+          <!-- If not authenticated, show Login link -->
+          <a href="{% url 'accounts:login' %}" class="navbar__button navbar__button">Login</a>
+        {% endif %}
       </div>
     </div>
   </nav>

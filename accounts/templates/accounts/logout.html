@@ -1,12 +1,16 @@
+<!-- logout.html -->
 {% extends 'base.html' %}
 
 {% block content %}
-  <div class="container">
-    <h2>You have been logged out</h2>
-    <div class="border-top pt-3">
-      <p class="text-muted">
-        Login again: <a class="ml-2" href="{% url 'login' %}">Login</a>
-      </p>
+<div class="login-wrapper">
+  <div class="login-container">
+    <div class="form-header">
+      <h1>See You Again Soon</h1>
+      <p>You have been successfully logged out</p>
+    </div>
+    <div class="login-footer">
+      <p>Want to login again? <a href="{% url 'accounts:login' %}">Sign In</a></p>
     </div>
   </div>
+</div>
 {% endblock %}

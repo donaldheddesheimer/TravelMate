@@ -1,49 +1,20 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{% load static %}
 
-{% block title %}Edit Profile - TravelMate{% endblock %}
+{% block title %}Your Profile - TravelMate{% endblock %}
 
 {% block content %}
-<div class="edit-profile-wrapper">
-  <div class="edit-profile-container">
-    <h2 class="profile-page-title">Edit Profile</h2>
-    {% if messages %}
-      <div class="messages">
-        {% for message in messages %}
-          <div class="alert {{ message.tags }}">{{ message }}</div>
-        {% endfor %}
+<div class="profile-wrapper">
+  <div class="profile-container">
+    <h2 class="profile-page-title">Your Profile</h2>
+
+    <div class="profile-grid">
+      <!-- User Info -->
+      <div class="profile-info">
+        <p><strong>Username:</strong> {{ request.user.username }}</p>
+        <p><strong>Email:</strong> {{ request.user.email }}</p>
       </div>
-    {% endif %}
-    <form method="POST" enctype="multipart/form-data">
-      {% csrf_token %}
-      <div class="profile-edit-grid">
-        <!-- Profile Picture Section -->
-        <div class="profile-picture-section">
-          {% if request.user.profile.profile_picture %}
-            <img src="{{ request.user.profile.profile_picture.url }}" alt="Profile Picture" class="profile-pic">
-          {% else %}
-            <img src="{% static 'images/default_user.jpg' %}" alt="Default Profile Picture" class="profile-pic">
-          {% endif %}
-          <div class="upload-field">
-            {{ profile_form.profile_picture|as_crispy_field }}
-          </div>
-        </div>
-        <!-- Profile Details Section -->
-        <div class="profile-details-section">
-          <div class="user-details">
-            {{ user_form|crispy }}
-          </div>
-          <div class="additional-details">
-            {{ profile_form.address|as_crispy_field }}
-            {{ profile_form.phone|as_crispy_field }}
-            {{ profile_form.bio|as_crispy_field }}
-          </div>
-        </div>
-      </div>
-      <div class="form-submit">
-        <button type="submit" class="btn profile-save-btn">Save Changes</button>
-      </div>
-    </form>
+    </div>
   </div>
 </div>
 {% endblock %}

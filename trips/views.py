@@ -1,41 +1,52 @@
-from django.shortcuts import render, redirect
-from .models import Trip
+# trips/views.py
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from .models import Trip
+from .forms import TripForm
 
+@login_required
+def trip_list(request):
+    trips = Trip.objects.filter(user=request.user)
+    return render(request, 'trips/trip_list.html', {'trips': trips})
 
-@login_required(login_url='login')
-def add_trip(request):
+@login_required
+def trip_create(request):
     if request.method == 'POST':
         form = TripForm(request.POST)
         if form.is_valid():
             trip = form.save(commit=False)
             trip.user = request.user
             trip.save()
-            return redirect('trips:list')  # Change if needed
+            return redirect('trips:list')
     else:
         form = TripForm()
-    return render(request, 'trips/add_trip.html', {'form': form})
+    return render(request, 'trips/trip_create.html', {'form': form})
 
-def trip_list(request):
-    if not request.user.is_authenticated:
-        return redirect('login')  # or your login URL name
+@login_required
+def trip_dashboard(request, trip_id):
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    context = {
+        'trip': trip,
+        'active_tab': 'overview'
+    }
+    return render(request, 'trips/dashboard.html', context)
 
-    trips = Trip.objects.filter(user=request.user)
-    return render(request, 'trips/trip_list.html', {'trips': trips})
-
-
-
-def trip_create(request):
+@login_required
+def trip_edit(request, trip_id):
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
     if request.method == 'POST':
-        # Process form data here (for now, you can print it)
-        destination = request.POST.get('destination')
-        date_leaving = request.POST.get('date_leaving')
-        date_return = request.POST.get('date_return')
-        print("Destination:", destination)
-        print("Leaving:", date_leaving)
-        print("Returning:", date_return)
-        # Redirect after processing
-        return redirect('trips:list')
+        form = TripForm(request.POST, instance=trip)
+        if form.is_valid():
+            form.save()
+            return redirect('trips:dashboard', trip_id=trip.id)
+    else:
+        form = TripForm(instance=trip)
+    return render(request, 'trips/trip_edit.html', {'form': form, 'trip': trip})
 
-    # For GET requests, render the form
-    return render(request, 'trips/trip_create.html')
+@login_required
+def trip_delete(request, trip_id):
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    if request.method == 'POST':
+        trip.delete()
+        return redirect('trips:list')
+    return render(request, 'trips/trip_confirm_delete.html', {'trip': trip})

@@ -137,7 +137,6 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'somarkanteh14@gmail.com'
 EMAIL_HOST_PASSWORD = 'idqx vwpz qgss pxhb'
-LOGOUT_REDIRECT_URL = 'account.logout'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
