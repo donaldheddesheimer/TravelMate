@@ -1,4 +1,5 @@
 {% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,31 +10,28 @@
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
-  <!-- Link your CSS file if you have one -->
+  <!-- CSS -->
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <!-- Transparent Navbar (global navigation) -->
+  {% block navbar %}
   <nav class="navbar">
     <div class="navbar__content">
       <div class="navbar__logo">
-        <!-- Adjust URL names if needed -->
         <a href="{% url 'home:index' %}">TravelMate</a>
       </div>
       <div class="navbar__buttons">
-        <!-- These could be buttons or links; adjust as required -->
         <a href="{% url 'accounts:login' %}" class="navbar__button">Login</a>
         <a href="{% url 'trips:list' %}" class="navbar__button navbar__button--primary">View Trips</a>
       </div>
     </div>
   </nav>
+  {% endblock %}
 
-  <!-- Main Content -->
   <main>
     {% block content %}
-    <!-- Child templates will inject content here -->
     {% endblock %}
   </main>
 

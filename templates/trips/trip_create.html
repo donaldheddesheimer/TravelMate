@@ -3,98 +3,18 @@
 
 {% block title %}Add Trip - TravelMate{% endblock %}
 
-{% block extra_head %}
-<style>
-  /* Custom Properties */
-  :root {
-    --color-light: var(--color-neutral-200);
-    --color-dark: var(--color-neutral-800);
-    --color-primary: #ff4c24;
-    --color-neutral-100: #ffffff;
-    --color-neutral-200: #efeeec;
-    --color-neutral-300: #e3e1de;
-    --color-neutral-400: #cbc8c5;
-    --color-neutral-500: #818180;
-    --color-neutral-600: #2c2c2c;
-    --color-neutral-700: #1f1f1f;
-    --color-neutral-800: #131313;
-    --color-neutral-900: #000000;
-    --color-white: var(--color-neutral-100);
-    --color-black: var(--color-neutral-900);
-    --color-error: var(--color-primary);
-    --color-success: #0ba954;
-    --cubic-default: cubic-bezier(0.65, 0.05, 0, 1);
-    --duration-default: 0.735s;
-    --animation-default: var(--duration-default) var(--cubic-default);
-    --gap: 2em;
-    --section-padding: calc(3.5em + (var(--gap) * 2));
-    --container-padding: 2em;
-    --header-height: calc(1.5em + (var(--gap) * 2));
-    --footer-height: calc(2.785em + (var(--gap) * 2));
-  }
-
-  a {
-    text-decoration: none;
-  }
-
-  /* Responsive adjustments */
-  @media screen and (max-width: 991px) {
-    :root {
-      --container-padding: 1.5em;
-    }
-  }
-  @media screen and (max-width: 767px) {
-    :root {
-      --container-padding: 1em;
-    }
-  }
-
-  .form-container {
-    background-color: rgba(0, 0, 0, 0.75);
-    padding: var(--container-padding);
-    border-radius: 10px;
-    max-width: 600px;
-    margin: 5rem auto;
-    text-align: center;
-  }
-  .form-container h1 {
-    font-family: 'Poppins', sans-serif;
-    color: var(--color-light);
-    margin-bottom: 1.5rem;
-  }
-  .form-container label {
-    display: block;
-    color: var(--color-light);
-    margin-bottom: 0.5rem;
-    font-family: 'Poppins', sans-serif;
-  }
-  .form-container input {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 1.5rem;
-    border-radius: 6px;
-    border: 1px solid var(--color-neutral-400);
-    font-size: 1rem;
-  }
-  .form-container button {
-    font-size: 1.3em;
-    font-weight: 600;
-    padding: 1em 2.5em;
-    border: none;
-    border-radius: 12px;
-    color: white;
-    background: linear-gradient(135deg, #ff7e5f, #feb47b);
-    box-shadow: 0 0 25px rgba(255, 126, 95, 0.7), 0 0 60px rgba(254, 180, 123, 0.4);
-    transition: transform 0.25s ease, box-shadow 0.3s ease, background 0.35s ease;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .form-container button:hover {
-    transform: scale(1.1) translateY(-3px);
-    background: linear-gradient(135deg, #ff9966, #ff5e62);
-    box-shadow: 0 0 35px rgba(255, 105, 95, 0.8), 0 0 75px rgba(255, 160, 120, 0.5);
-  }
-</style>
+{% block navbar %}
+  <nav class="navbar navbar--alt">
+    <div class="navbar__content">
+      <div class="navbar__logo">
+        <a href="{% url 'home:index' %}">TravelMate</a>
+      </div>
+      <div class="navbar__buttons">
+        <!-- Your alternative buttons or links -->
+        <a href="{% url 'accounts:login' %}" class="navbar__button">Alt Login</a>
+      </div>
+    </div>
+  </nav>
 {% endblock %}
 
 {% block content %}
@@ -123,7 +43,6 @@
         <option value="Miami, USA">
         <option value="San Francisco, USA">
         <option value="Chicago, USA">
-        <!-- Add more destinations as needed -->
       </datalist>
     </div>
     <div>
@@ -162,9 +81,7 @@
       const leavingDate = new Date(dateLeaving.value);
       const returnDate = new Date(dateReturn.value);
 
-      // Strip time from today's date
       today.setHours(0, 0, 0, 0);
-
       if (leavingDate < today) {
         alert("The departure date must be in the future.");
         e.preventDefault();
