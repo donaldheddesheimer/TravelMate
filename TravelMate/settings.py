@@ -135,5 +135,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # load .env
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
-OWM_API_KEY = os.getenv('OPENWEATHER_API_KEY')
+OWM_API_KEY = os.getenv('OWM_API_KEY')
 GEOCODE_API_KEY = os.getenv('GEOCODE_API_KEY')
