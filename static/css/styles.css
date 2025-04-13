@@ -153,6 +153,37 @@ svg {
   text-transform: uppercase;
 }
 
+/* Hamburger menu styles */
+.navbar__hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.navbar__hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background: white;
+  margin: 5px 0;
+  transition: all 0.3s ease;
+}
+
+.navbar__hamburger.is-active span:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.navbar__hamburger.is-active span:nth-child(2) {
+  opacity: 0;
+}
+
+.navbar__hamburger.is-active span:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
 .navbar__buttons {
   display: flex;
   gap: 1em;
@@ -176,6 +207,87 @@ svg {
   background: white;
   color: black;
   font-weight: bold;
+}
+
+/* Dropdown menu for mobile */
+.navbar__dropdown {
+  position: fixed;
+  top: 70px;
+  left: 0;
+  width: 100%;
+  background-color: var(--color-neutral-800);
+  padding: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.navbar__dropdown.is-open {
+  max-height: 300px;
+}
+
+.navbar__dropdown-item {
+  display: block;
+  padding: 1em 2em;
+  color: white;
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-neutral-700);
+  transition: background 0.3s;
+}
+
+.navbar__dropdown-item:hover {
+  background-color: var(--color-neutral-700);
+}
+
+.navbar__dropdown-item--primary {
+  background-color: var(--color-primary);
+  color: var(--color-neutral-900);
+  font-weight: bold;
+}
+
+@media (max-width: 991px) {
+  .navbar {
+    height: 70px;
+    background-color: var(--color-neutral-900);
+  }
+
+  main {
+    padding-top: 70px;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@media (max-width: 770px) {
+  .navbar__buttons {
+    display: none;
+  }
+
+  .navbar__hamburger {
+    display: block;
+  }
+
+  .navbar__dropdown {
+    display: block;
+  }
+
+  .navbar__buttons {
+    flex-wrap: wrap;
+    gap: 0.5em;
+    justify-content: center;
+  }
+
+  .navbar__button {
+    padding: 0.4em 0.8em;
+    font-size: 0.85em;
+  }
+}
+
+@media (min-width: 769px) {
+  .navbar__dropdown {
+    display: none !important;
+  }
 }
 
 /* ===================================================================== */
@@ -372,6 +484,7 @@ svg {
   justify-content: center;
   gap: 0.75rem;
   padding: 1.25em 2.5em !important;
+  max-width: 95%;
 }
 
 .add-trip-button svg {
