@@ -10,6 +10,8 @@ urlpatterns = [
     path('trips/', include('trips.urls', namespace='trips')),
     path('', include('home.urls', namespace='home')),
     path('api/', include('api.urls')),
+    path('chatbot/', include('chatbot.urls')),
+    path('trips/<int:trip_id>/', include('chatbot.urls')),
 ]
 
 if settings.DEBUG:
