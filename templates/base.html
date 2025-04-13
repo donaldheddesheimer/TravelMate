@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TravelMate{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% block navbar %}
+  <nav class="navbar">
+    <div class="navbar__content">
+      <div class="navbar__logo">
+        <a href="{% url 'home:index' %}">TravelMate</a>
+      </div>
+      <div class="navbar__buttons">
+        {% if user.is_authenticated %}
+          <!-- If the user is authenticated, display Profile, View Trips, and Logout buttons -->
+          <a href="{% url 'accounts:profile' %}" class="navbar__button">Profile</a>
+          <a href="{% url 'trips:list' %}" class="navbar__button">View Trips</a>
+          <a href="{% url 'accounts:logout' %}" class="navbar__button navbar__button--primary">Logout</a>
+        {% else %}
+          <!-- If not authenticated, show Login link -->
+          <a href="{% url 'accounts:login' %}" class="navbar__button navbar__button">Login</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+  {% endblock %}
+
+  <main>
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

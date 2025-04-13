@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Add Trip - TravelMate{% endblock %}
+
+{% block navbar %}
+  <nav class="navbar navbar--alt">
+    <div class="navbar__content">
+      <div class="navbar__logo">
+        <a href="{% url 'home:index' %}">TravelMate</a>
+      </div>
+      <div class="navbar__buttons">
+        <a href="{% url 'accounts:login' %}" class="navbar__button">Alt Login</a>
+      </div>
+    </div>
+  </nav>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+  <div class="form-container trip-form">
+    <div class="form-header">
+      <h1>Plan Your Next Trip</h1>
+      <p>Where will your travels take you next?</p>
+    </div>
+
+    <form method="POST" action="{% url 'trips:create' %}" class="trip-form__content">
+      {% csrf_token %}
+
+      <!-- Destination Field -->
+      <div class="form-group">
+        <div class="input-wrapper">
+          {{ form.destination }}
+          <datalist id="destinationOptions">
+            <option value="New York, USA">
+            <option value="London, UK">
+            <option value="Paris, France">
+            <option value="Tokyo, Japan">
+            <option value="Sydney, Australia">
+            <option value="Rome, Italy">
+            <option value="Barcelona, Spain">
+            <option value="Berlin, Germany">
+            <option value="Dubai, UAE">
+            <option value="Singapore">
+            <option value="Bangkok, Thailand">
+            <option value="Los Angeles, USA">
+            <option value="Las Vegas, USA">
+            <option value="Miami, USA">
+            <option value="San Francisco, USA">
+            <option value="Chicago, USA">
+          </datalist>
+        </div>
+      </div>
+
+      <!-- Date Fields -->
+      <div class="date-group">
+        <div class="form-group">
+          <div class="input-wrapper">
+            {{ form.date_leaving }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="input-wrapper">
+            {{ form.date_returning }}
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="add-trip-button add-trip-button--glow">
+        <span>Create Trip</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"></path>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const destinationInput = document.getElementById('id_destination');
+    const dateLeaving = document.getElementById('id_date_leaving');
+    const dateReturn = document.getElementById('id_date_returning');
+    const form = document.querySelector('form');
+
+    // Enhanced placeholder behavior
+    if (destinationInput) {
+      destinationInput.addEventListener('focus', function() {
+        this.placeholder = 'Start typing to see suggestions...';
+        this.setAttribute('data-placeholder', this.placeholder);
+      });
+
+      destinationInput.addEventListener('blur', function() {
+        this.placeholder = this.value ? '' : 'Enter destination';
+        this.setAttribute('data-placeholder', this.placeholder);
+      });
+
+      // Initialize placeholder
+      destinationInput.placeholder = 'Enter destination';
+      destinationInput.setAttribute('list', 'destinationOptions');
+    }
+
+    // Date validation
+    if (form && dateLeaving && dateReturn) {
+      form.addEventListener('submit', function(e) {
+        const today = new Date();
+        const leavingDate = new Date(dateLeaving.value);
+        const returnDate = new Date(dateReturn.value);
+
+        today.setHours(0, 0, 0, 0);
+
+        if (leavingDate < today) {
+          alert("The departure date must be in the future.");
+          e.preventDefault();
+          dateLeaving.focus();
+          return;
+        }
+
+        if (returnDate < leavingDate) {
+          alert("The return date must be after the departure date.");
+          e.preventDefault();
+          dateReturn.focus();
+          return;
+        }
+      });
+
+      // Set minimum date for date inputs to today
+      const today = new Date().toISOString().split('T')[0];
+      dateLeaving.min = today;
+      dateReturn.min = today;
+
+      // Update return date min when departure date changes
+      dateLeaving.addEventListener('change', function() {
+        dateReturn.min = this.value;
+      });
+    }
+  });
+</script>
+{% endblock %}
