@@ -9,6 +9,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls', namespace='accounts')),
     path('trips/', include('trips.urls', namespace='trips')),
     path('', include('home.urls', namespace='home')),
+    path('api/', include('api.urls')),
 ]
 
 if settings.DEBUG:
