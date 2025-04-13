@@ -43,5 +43,5 @@ def chatbot(request):
         {"role": "user", "content": user_message}
     ]
 
-    response = DeepSeekService.chat_completion(messages)
-    return Response({'reply': response['choices'][0]['message']['content']})
+    reply = DeepSeekService.chat_completion(messages)
+    return Response({'reply': reply})
