@@ -22,9 +22,80 @@ def weather_forecast(request):
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def place_search(request):
     query = request.GET.get('q')
-    location = request.GET.get('location')
-    data = GooglePlacesService.search_places(query, location)
-    return Response(data)
+    if not query:
+        return Response({'results': []})
+
+    try:
+        # Get user's approximate location if available
+        location = None
+        if request.user.is_authenticated and hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            if profile.location_lat and profile.location_lng:
+                location = f"{profile.location_lat},{profile.location_lng}"
+
+        # Get places from Google
+        data = GooglePlacesService.search_places(query, location)
+
+        # Format results consistently
+        results = []
+        for place in data.get('places', [])[:8]:  # Use new API format
+            results.append({
+                'name': place.get('displayName', {}).get('text', ''),
+                'formatted_address': place.get('formattedAddress', ''),
+                'location': place.get('location', {})
+            })
+
+        return Response({'results': results})
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@cache_page(60 * 15)
+@throttle_classes([UserRateThrottle, AnonRateThrottle])
+def place_autocomplete(request):
+    query = request.GET.get('q')
+    if not query or len(query) < 2:
+        return Response({'suggestions': []})
+
+    try:
+        # Get user's approximate location if available
+        location = None
+        if request.user.is_authenticated and hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            if profile.location_lat and profile.location_lng:
+                location = f"{profile.location_lat},{profile.location_lng}"
+
+        # Get autocomplete suggestions
+        data = GooglePlacesService.autocomplete(query, location)
+
+        # Format suggestions for frontend
+        suggestions = []
+        for suggestion in data.get('suggestions', []):
+            if 'placePrediction' in suggestion:
+                suggestions.append({
+                    'type': 'place',
+                    'text': suggestion['placePrediction']['text']['text'],
+                    'place_id': suggestion['placePrediction']['placeId']
+                })
+            elif 'queryPrediction' in suggestion:
+                suggestions.append({
+                    'type': 'query',
+                    'text': suggestion['queryPrediction']['text']['text']
+                })
+
+        return Response({'suggestions': suggestions})
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+@cache_page(60 * 60 * 24)  # Cache for 24 hours
+@throttle_classes([UserRateThrottle, AnonRateThrottle])
+def place_details(request, place_id):
+    try:
+        data = GooglePlacesService.get_place_details(place_id)
+        return Response(data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['POST'])
 @cache_page(60 * 15)
