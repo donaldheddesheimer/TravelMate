@@ -11,12 +11,12 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -47,7 +47,14 @@ INSTALLED_APPS = [
     'api',
     'accounts',
     'home',
+    'crispy_forms',
+    'crispy_bootstrap4',
+    'rest_framework',
+    'requests',
+    'dotenv',
 ]
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -123,17 +130,47 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
-STATIC_URL = "static/"
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+LOGIN_URL = 'accounts:login'
+LOGOUT_REDIRECT_URL = 'accounts:logout'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'somarkanteh14@gmail.com'
+EMAIL_HOST_PASSWORD = 'idqx vwpz qgss pxhb'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-# load .env
-BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '100/hour',
+        'anon': '10/hour',
+    }
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'travelmate-api-cache',
+        'TIMEOUT': 3600,
+    }
+}
+
+load_dotenv()
 OWM_API_KEY = os.getenv('OWM_API_KEY')
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 GEOCODE_API_KEY = os.getenv('GEOCODE_API_KEY')

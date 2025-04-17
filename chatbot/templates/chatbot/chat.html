@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="chat-wrapper">
+    <div class="chat-container">
+        <h2 class="chat-title">Travel Assistant for {{ trip.destination }}</h2>
+
+        <div class="chat-history" id="chatHistory">
+            {% for message in messages %}
+            <div class="message {% if message.is_user_message %}user-message{% else %}bot-message{% endif %}">
+                <div class="message-content">{{ message.message|safe }}</div>
+                <small data-timestamp="{{ message.timestamp|date:'c' }}">{{ message.timestamp|time }}</small>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Ask about your trip...">
+            <button id="sendButton">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tripContext = `{{ trip.destination }} in {{ trip.date_leaving }} to {{ trip.date_returning }}`;
+    const chatHistory = document.getElementById('chatHistory');
+    const userInput = document.getElementById('userInput');
+    const sendButton = document.getElementById('sendButton');
+
+    let isWaiting = false;
+
+    function scrollToBottom() {
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.innerText = text;
+        return div.innerHTML;
+    }
+
+    function formatBotMessage(message) {
+        const escaped = escapeHtml(message);
+        let formatted = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formatted = formatted.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+
+        const lines = formatted.split('\n');
+        let inList = false;
+        let result = '';
+
+        for (let line of lines) {
+            if (line.trim().startsWith('-')) {
+                if (!inList) {
+                    result += '<ul>';
+                    inList = true;
+                }
+                result += `<li>${line.replace(/^-+\s*/, '')}</li>`;
+            } else {
+                if (inList) {
+                    result += '</ul>';
+                    inList = false;
+                }
+                result += `<p>${line}</p>`;
+            }
+        }
+
+        if (inList) result += '</ul>';
+        return result;
+    }
+
+    function appendMessage(message, isUser = true, isTemporary = false) {
+        const now = new Date();
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+
+        const formattedMessage = isUser
+            ? escapeHtml(message)
+            : formatBotMessage(message);
+
+        messageDiv.innerHTML = `
+            <div class="message-content">${formattedMessage}</div>
+            <small data-timestamp="${now.toISOString()}">${timeAgo(now)}</small>
+        `;
+        if (isTemporary) {
+            messageDiv.id = "typingIndicator";
+        }
+
+        chatHistory.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message || isWaiting) return;
+
+        isWaiting = true;
+        sendButton.disabled = true;
+        userInput.disabled = true;
+
+        appendMessage(message, true);
+        userInput.value = '';
+
+        // Show temporary "thinking" message
+        appendMessage('TravelMate is thinking...', false, true);
+
+        try {
+            const response = await fetch(`/api/chat/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ message, trip_context: tripContext })
+            });
+
+            const data = await response.json();
+
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) chatHistory.removeChild(typingIndicator);
+
+            appendMessage(data.reply, false);
+
+        } catch (error) {
+            console.error('Error:', error);
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) chatHistory.removeChild(typingIndicator);
+            appendMessage('Sorry, something went wrong.', false);
+        }
+
+        isWaiting = false;
+        sendButton.disabled = false;
+        userInput.disabled = false;
+        userInput.focus();
+    }
+
+    function timeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+
+    function updateTimestamps() {
+        const timestamps = document.querySelectorAll('.message small');
+        timestamps.forEach(small => {
+            const ts = new Date(small.dataset.timestamp);
+            small.textContent = timeAgo(ts);
+        });
+    }
+
+    setInterval(updateTimestamps, 60000);
+
+    sendButton.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    scrollToBottom();
+});
+</script>
+{% endblock %}

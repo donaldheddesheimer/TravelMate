@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home - TravelMate{% endblock %}
+
+{% block content %}
+<div class="parallax">
+  <section class="parallax__header">
+    <div class="parallax__visuals">
+      <div class="parallax__black-line-overflow"></div>
+      <div data-parallax-layers class="parallax__layers">
+        <img src="https://cdn.prod.website-files.com/671752cd4027f01b1b8f1c7f/6717795be09b462b2e8ebf71_osmo-parallax-layer-3.webp" loading="eager" width="800" data-parallax-layer="1" alt="" class="parallax__layer-img">
+        <img src="https://cdn.prod.website-files.com/671752cd4027f01b1b8f1c7f/6717795b4d5ac529e7d3a562_osmo-parallax-layer-2.webp" loading="eager" width="800" data-parallax-layer="2" alt="" class="parallax__layer-img">
+        <div data-parallax-layer="3" class="parallax__layer-title">
+          <h2 class="parallax__title">TravelMate</h2>
+        </div>
+        <img src="https://cdn.prod.website-files.com/671752cd4027f01b1b8f1c7f/6717795bb5aceca85011ad83_osmo-parallax-layer-1.webp" loading="eager" width="800" data-parallax-layer="4" alt="" class="parallax__layer-img">
+      </div>
+      <div class="parallax__fade"></div>
+    </div>
+  </section>
+  <section class="parallax__content">
+    <div class="parallax__description-block">
+      <p class="parallax__description">
+        TravelMate is a web-based travel planner that offers personalized packing lists, real-time weather updates, travel tips, flight booking, and chatbot-assisted planning.
+      </p>
+   <a href="{% url 'trips:create' %}" class="add-trip-button add-trip-button--glow">Add Trip</a>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- External JavaScript libraries -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+
+<script>
+  // ------- Osmo [https://osmo.supply/] ------- //
+
+document.addEventListener("DOMContentLoaded", () => {
+	// Register GSAP Plugins
+  gsap.registerPlugin(ScrollTrigger);
+  // Parallax Layers
+  document.querySelectorAll('[data-parallax-layers]').forEach((triggerElement) => {
+    let tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: triggerElement,
+        start: "0% 0%",
+        end: "100% 0%",
+        scrub: 0
+      }
+    });
+    const layers = [
+      { layer: "1", yPercent: 70 },
+      { layer: "2", yPercent: 55 },
+      { layer: "3", yPercent: 40 },
+      { layer: "4", yPercent: 10 }
+    ];
+    layers.forEach((layerObj, idx) => {
+      tl.to(
+        triggerElement.querySelectorAll(`[data-parallax-layer="${layerObj.layer}"]`),
+        {
+          yPercent: layerObj.yPercent,
+          ease: "none"
+        },
+        idx === 0 ? undefined : "<"
+      );
+    });
+  });
+});
+/* Lenis */
+const lenis = new Lenis();
+lenis.on('scroll', ScrollTrigger.update);
+gsap.ticker.add((time) => {lenis.raf(time * 1000);});
+gsap.ticker.lagSmoothing(0);
+</script>
+{% endblock %}

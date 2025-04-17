@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Your Profile - TravelMate{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper">
+  <div class="profile-container">
+    <h2 class="profile-page-title">Your Profile</h2>
+
+    <div class="profile-grid">
+      <!-- User Info -->
+      <div class="profile-info">
+        <p><strong>Username:</strong> {{ request.user.username }}</p>
+        <p><strong>Email:</strong> {{ request.user.email }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

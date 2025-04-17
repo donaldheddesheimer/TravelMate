@@ -1,0 +1,41 @@
+<!-- login.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Login - TravelMate{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+  <div class="login-container">
+    <form method="POST" class="login-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'trips:list' %}">
+      <div class="form-header">
+        <h1 class="login-title">Welcome Back</h1>
+        <p>Login to continue your journey</p>
+      </div>
+      <fieldset class="form-group">
+        <div class="form-field">
+          {{ form|crispy }}
+        </div>
+      </fieldset>
+      <div class="form-submit">
+        <button class="login-btn" type="submit">
+          <span>Login</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="form-help">
+        <a href="{% url 'accounts:password_reset' %}">Forgot password?</a>
+      </div>
+    </form>
+    <div class="login-footer">
+      <p>Don't have an account? <a href="{% url 'accounts:signup' %}">Sign Up</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
