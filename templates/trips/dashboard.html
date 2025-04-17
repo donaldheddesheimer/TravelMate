@@ -16,10 +16,10 @@
     <nav class="dashboard-nav">
       <ul>
         <li><a href="{% url 'trips:dashboard' trip.id %}" class="{% if active_tab == 'overview' %}active{% endif %}">Overview</a></li>
-        <li><a href="{% url 'weather:forecast' trip.id %}" class="{% if active_tab == 'weather' %}active{% endif %}">Weather</a></li>
-        <li><a href="{% url 'packing:list' trip.id %}" class="{% if active_tab == 'packing' %}active{% endif %}">Packing List</a></li>
-        <li><a href="{% url 'tips:destination' trip.id %}" class="{% if active_tab == 'tips' %}active{% endif %}">Travel Tips</a></li>
-        <li><a href="{% url 'chatbot:trip' trip.id %}" class="{% if active_tab == 'chatbot' %}active{% endif %}">Trip Assistant</a></li>
+        {# <li><a href="{% url 'weather:forecast' trip.id %}" class="{% if active_tab == 'weather' %}active{% endif %}">Weather</a></li>#}
+        {# <li><a href="{% url 'packing:list' trip.id %}" class="{% if active_tab == 'packing' %}active{% endif %}">Packing List</a></li>#}
+        {# <li><a href="{% url 'tips:destination' trip.id %}" class="{% if active_tab == 'tips' %}active{% endif %}">Travel Tips</a></li>#}
+        <li><a href="{% url 'chatbot:chat_view' trip.id %}" class="{% if active_tab == 'chatbot' %}active{% endif %}">Trip Assistant</a></li>
       </ul>
     </nav>
 
@@ -31,19 +31,19 @@
           <div class="weather-card">
             <h3>Weather Forecast</h3>
             <!-- Weather widget will be loaded here -->
-            <a href="{% url 'weather:forecast' trip.id %}" class="btn">View Full Forecast</a>
+            {#<a href="{% url 'weather:forecast' trip.id %}" class="btn">View Full Forecast</a> #}
           </div>
 
           <div class="packing-card">
             <h3>Packing List</h3>
             <!-- Packing list summary will be loaded here -->
-            <a href="{% url 'packing:list' trip.id %}" class="btn">View Full List</a>
+            {#<a href="{% url 'packing:list' trip.id %}" class="btn">View Full List</a> #}
           </div>
 
           <div class="tips-card">
             <h3>Travel Tips</h3>
             <!-- Tips summary will be loaded here -->
-            <a href="{% url 'tips:destination' trip.id %}" class="btn">View All Tips</a>
+            {#<a href="{% url 'tips:destination' trip.id %}" class="btn">View All Tips</a> #}
           </div>
         </div>
       {% endblock %}
