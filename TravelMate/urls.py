@@ -12,6 +12,8 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('chatbot/', include('chatbot.urls')),
     path('trips/<int:trip_id>/', include('chatbot.urls')),
+    path("admin/", admin.site.urls),
+    path('weather/api/', include("weather.urls"))
 ]
 
 if settings.DEBUG:
