@@ -34,7 +34,10 @@
           {% if user.is_authenticated %}
             <a href="{% url 'accounts:profile' %}" class="navbar__button">Profile</a>
             <a href="{% url 'trips:list' %}" class="navbar__button">View Trips</a>
-            <a href="{% url 'accounts:logout' %}" class="navbar__button navbar__button--primary">Logout</a>
+            <form method="post" action="{% url 'accounts:logout' %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="navbar__button navbar__button--primary">Logout</button>
+            </form>
           {% else %}
             <a href="{% url 'accounts:login' %}" class="navbar__button navbar__button">Login</a>
           {% endif %}
