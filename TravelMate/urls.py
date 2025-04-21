@@ -9,7 +9,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('trips/', include('trips.urls', namespace='trips')),
     path('', include('home.urls', namespace='home')),
-    path('api/', include('api.urls')),
+    path('api/', include('api.urls', namespace='api')),
     path('trips/<int:trip_id>/', include('chatbot.urls')),
     path('weather/api/', include("weather.urls"))
 ]

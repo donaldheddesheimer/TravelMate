@@ -3,6 +3,60 @@
 
 {% block title %}Add Trip - TravelMate{% endblock %}
 
+{% block extra_head %}
+<style>
+  .input-wrapper {
+    position: relative; /* Needed for absolute positioning of suggestions */
+  }
+
+  .autocomplete-suggestions-list {
+    position: absolute;
+    top: 100%; /* Position below the input */
+    left: 0;
+    right: 0;
+    background-color: var(--color-neutral-700); /* Dark background */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: none; /* Avoid double border with input */
+    border-radius: 0 0 10px 10px; /* Match input bottom radius */
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000; /* Ensure it's above other elements */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    display: none; /* Hidden by default */
+    margin-top: -1px; /* Overlap slightly to hide input bottom border */
+  }
+
+  .suggestion-item {
+    padding: 0.8rem 1.5rem; /* Match input padding somewhat */
+    color: var(--color-light);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .suggestion-item:last-child {
+    border-bottom: none;
+  }
+
+  .suggestion-item:hover {
+    background-color: var(--color-primary);
+    color: var(--color-neutral-900); /* Dark text on hover */
+  }
+
+  .suggestion-item.no-results {
+    padding: 0.8rem 1.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: default;
+  }
+  .suggestion-item.no-results:hover {
+      background-color: transparent; /* No hover effect for 'no results' */
+      color: rgba(255, 255, 255, 0.5);
+  }
+
+</style>
+{% endblock %}
+
+
 {% block content %}
 <div class="form-wrapper">
   <div class="form-container trip-form">
@@ -17,27 +71,11 @@
       <!-- Destination Field -->
       <div class="form-group">
         <div class="input-wrapper">
-          {{ form.destination }}
-          {# Add placeholder and list directly to the widget in forms.py for cleaner template #}
-          {# Or keep the datalist here if preferred #}
-          <datalist id="destinationOptions">
-            <option value="New York, USA">
-            <option value="London, UK">
-            <option value="Paris, France">
-            <option value="Tokyo, Japan">
-            <option value="Sydney, Australia">
-            <option value="Rome, Italy">
-            <option value="Barcelona, Spain">
-            <option value="Berlin, Germany">
-            <option value="Dubai, UAE">
-            <option value="Singapore">
-            <option value="Bangkok, Thailand">
-            <option value="Los Angeles, USA">
-            <option value="Las Vegas, USA">
-            <option value="Miami, USA">
-            <option value="San Francisco, USA">
-            <option value="Chicago, USA">
-          </datalist>
+          {{ form.destination }} {# This should render <input id="id_destination" ...> #}
+          {# <datalist id="destinationOptions"> ... </datalist> #}
+          <div id="autocomplete-suggestions" class="autocomplete-suggestions-list">
+            <!-- Suggestions will be loaded here by JavaScript -->
+          </div>
         </div>
       </div>
 
@@ -48,7 +86,6 @@
             {{ form.date_leaving }}
           </div>
         </div>
-
         <div class="form-group">
           <div class="input-wrapper">
             {{ form.date_returning }}
@@ -60,34 +97,19 @@
       <div class="form-group" id="activities-section">
         <label class="activities-label">Activities (Optional)</label>
         <div id="activity-list">
-          <!-- Initial Activity Input -->
           <div class="activity-item">
-            <div class="input-wrapper activity-input-wrapper">
-              <input type="text" name="activities" placeholder="Enter an activity" class="activity-input">
-              <span class="input-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16">
-                  <path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5H2zM3 3H2v1h1V3z"/>
-                  <path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9z"/>
-                  <path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V7zM2 7h1v1H2V7zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5H2zm1 .5H2v1h1v-1z"/>
-                </svg>
-              </span>
-            </div>
-            <button type="button" class="remove-activity-btn" aria-label="Remove activity" style="display: none;"> <!-- Hidden for the first item -->
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-              </svg>
-            </button>
+             <div class="input-wrapper activity-input-wrapper">
+                <input type="text" name="activities" placeholder="Enter an activity" class="activity-input">
+                <span class="input-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16"> <path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5H2zM3 3H2v1h1V3z"/> <path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9z"/> <path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V7zM2 7h1v1H2V7zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5H2zm1 .5H2v1h1v-1z"/> </svg>
+                </span>
+             </div>
+             <button type="button" class="remove-activity-btn" aria-label="Remove activity" style="display: none;"> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"> <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/> </svg> </button>
           </div>
         </div>
-        <button type="button" id="add-activity-btn" class="add-activity-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-          </svg>
-          <span>Add Activity</span>
-        </button>
+        <button type="button" id="add-activity-btn" class="add-activity-btn"> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"> <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/> </svg> <span>Add Activity</span> </button>
       </div>
       <!-- End Activities Section -->
-
 
       <button type="submit" class="add-trip-button add-trip-button--glow">
         <span>Create Trip</span>
@@ -104,127 +126,179 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const destinationInput = document.getElementById('id_destination');
+    const suggestionsContainer = document.getElementById('autocomplete-suggestions');
     const dateLeaving = document.getElementById('id_date_leaving');
     const dateReturn = document.getElementById('id_date_returning');
     const form = document.querySelector('form');
     const activityList = document.getElementById('activity-list');
     const addActivityBtn = document.getElementById('add-activity-btn');
 
-    // --- Existing JS ---
-    // Enhanced placeholder behavior for destination
-    if (destinationInput) {
-      const initialPlaceholder = 'Enter destination'; // Store initial placeholder
-      destinationInput.placeholder = initialPlaceholder;
-      destinationInput.setAttribute('list', 'destinationOptions');
+    let debounceTimer;
+    const DEBOUNCE_DELAY = 300; // milliseconds
 
-      destinationInput.addEventListener('focus', function() {
-        this.placeholder = 'Start typing to see suggestions...';
+    // --- Autocomplete Logic ---
+    if (destinationInput && suggestionsContainer) {
+      const initialPlaceholder = 'Enter destination';
+      destinationInput.placeholder = initialPlaceholder;
+      destinationInput.setAttribute('autocomplete', 'off'); // Prevent browser autocomplete
+
+      const fetchSuggestions = async (query) => {
+        if (query.length < 2) {
+          hideSuggestions();
+          return;
+        }
+        // Use Django's url template tag to get the correct API endpoint URL
+        const apiUrl = "{% url 'api:places_autocomplete' %}";
+        const url = `${apiUrl}?q=${encodeURIComponent(query)}`;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          displaySuggestions(data.suggestions || []);
+        } catch (error) {
+          console.error("Error fetching autocomplete suggestions:", error);
+          // Optionally display an error message to the user
+          suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">Error loading suggestions</div>';
+          suggestionsContainer.style.display = 'block';
+        }
+      };
+
+      const displaySuggestions = (suggestions) => {
+        suggestionsContainer.innerHTML = ''; // Clear previous suggestions
+        if (suggestions.length === 0) {
+            // Optional: Show 'No results' message or just hide
+            // suggestionsContainer.innerHTML = '<div class="suggestion-item no-results">No suggestions found</div>';
+            // suggestionsContainer.style.display = 'block';
+            hideSuggestions(); // Hide if no results is preferred
+            return;
+        }
+
+        suggestions.forEach(suggestion => {
+          const item = document.createElement('div');
+          item.classList.add('suggestion-item');
+          item.textContent = suggestion.text; // Use the 'text' field from API response
+          item.addEventListener('click', () => {
+            destinationInput.value = suggestion.text; // Set input value on click
+            hideSuggestions();
+          });
+          suggestionsContainer.appendChild(item);
+        });
+
+        suggestionsContainer.style.display = 'block'; // Show the container
+      };
+
+      const hideSuggestions = () => {
+        suggestionsContainer.style.display = 'none';
+        suggestionsContainer.innerHTML = ''; // Clear content when hiding
+      };
+
+      destinationInput.addEventListener('input', () => {
+        const query = destinationInput.value.trim();
+        clearTimeout(debounceTimer); // Clear previous timer
+        if (query.length >= 2) {
+          debounceTimer = setTimeout(() => {
+            fetchSuggestions(query);
+          }, DEBOUNCE_DELAY);
+        } else {
+          hideSuggestions(); // Hide if query is too short
+        }
       });
 
-      destinationInput.addEventListener('blur', function() {
+      // Hide suggestions when clicking outside the input and the list
+      document.addEventListener('click', (event) => {
+        if (!destinationInput.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+          hideSuggestions();
+        }
+      });
+
+       // Reset placeholder on blur if empty
+       destinationInput.addEventListener('blur', function() {
         if (!this.value) {
           this.placeholder = initialPlaceholder;
         }
+        // Don't hide suggestions immediately on blur, the document click listener handles it better
+      });
+
+      destinationInput.addEventListener('focus', function() {
+        this.placeholder = 'Start typing destination...';
+         // Optionally, re-trigger search if there's text on focus
+         // const query = this.value.trim();
+         // if (query.length >= 2) {
+         //   fetchSuggestions(query);
+         // }
       });
     }
 
-    // Date validation and min date setting
+    // --- Existing Date Logic ---
     if (form && dateLeaving && dateReturn) {
       const today = new Date().toISOString().split('T')[0];
       dateLeaving.min = today;
-      // Set initial min for return date only if leaving date has a value
       if (dateLeaving.value) {
         dateReturn.min = dateLeaving.value > today ? dateLeaving.value : today;
       } else {
          dateReturn.min = today;
       }
 
-
       dateLeaving.addEventListener('change', function() {
-        // Ensure return date min is not before today, even if leaving date is today
         const leavingValue = this.value;
         dateReturn.min = leavingValue >= today ? leavingValue : today;
-        // If return date is now invalid, clear it (optional)
         if (dateReturn.value && dateReturn.value < dateReturn.min) {
             dateReturn.value = '';
         }
       });
 
       form.addEventListener('submit', function(e) {
-        const todayDate = new Date();
-        todayDate.setHours(0, 0, 0, 0); // Compare dates only
+         const todayDate = new Date();
+         todayDate.setHours(0, 0, 0, 0);
 
-        // Re-check min dates on submit as they might be bypassed
-        if (dateLeaving.value && new Date(dateLeaving.value) < todayDate) {
-          alert("The departure date cannot be in the past.");
-          e.preventDefault();
-          dateLeaving.focus();
-          return;
-        }
-
-        if (dateLeaving.value && dateReturn.value && new Date(dateReturn.value) < new Date(dateLeaving.value)) {
-          alert("The return date must be on or after the departure date.");
-          e.preventDefault();
-          dateReturn.focus();
-          return;
-        }
+         if (dateLeaving.value && new Date(dateLeaving.value) < todayDate) {
+           alert("The departure date cannot be in the past.");
+           e.preventDefault(); dateLeaving.focus(); return;
+         }
+         if (dateLeaving.value && dateReturn.value && new Date(dateReturn.value) < new Date(dateLeaving.value)) {
+           alert("The return date must be on or after the departure date.");
+           e.preventDefault(); dateReturn.focus(); return;
+         }
       });
     }
 
-    // --- New JS for Activities ---
+    // --- Existing Activities Logic ---
     if (activityList && addActivityBtn) {
-      const updateRemoveButtons = () => {
-        const activityItems = activityList.querySelectorAll('.activity-item');
-        activityItems.forEach((item, index) => {
-          const removeBtn = item.querySelector('.remove-activity-btn');
-          if (removeBtn) {
-            // Show remove button only if there's more than one activity item
-            removeBtn.style.display = activityItems.length > 1 ? 'inline-flex' : 'none';
-          }
-        });
-      };
+       // (Keep your existing activities add/remove logic here)
+       const updateRemoveButtons = () => {
+         const activityItems = activityList.querySelectorAll('.activity-item');
+         activityItems.forEach((item, index) => {
+           const removeBtn = item.querySelector('.remove-activity-btn');
+           if (removeBtn) {
+             removeBtn.style.display = activityItems.length > 1 ? 'inline-flex' : 'none';
+           }
+         });
+       };
 
-      addActivityBtn.addEventListener('click', function() {
-        const firstActivityItem = activityList.querySelector('.activity-item');
-        if (!firstActivityItem) return; // Should not happen, but safe check
+       addActivityBtn.addEventListener('click', function() {
+         const firstActivityItem = activityList.querySelector('.activity-item');
+         if (!firstActivityItem) return;
+         const newActivityItem = firstActivityItem.cloneNode(true);
+         const input = newActivityItem.querySelector('input[name="activities"]');
+         const removeBtn = newActivityItem.querySelector('.remove-activity-btn');
+         if (input) { input.value = ''; input.placeholder = 'Enter another activity'; }
+         if (removeBtn) { removeBtn.style.display = 'inline-flex'; }
+         activityList.appendChild(newActivityItem);
+         updateRemoveButtons();
+         if (input) { input.focus(); }
+       });
 
-        const newActivityItem = firstActivityItem.cloneNode(true);
-        const input = newActivityItem.querySelector('input[name="activities"]');
-        const removeBtn = newActivityItem.querySelector('.remove-activity-btn');
-
-        // Clear the input value and reset placeholder for the new item
-        if (input) {
-          input.value = '';
-          input.placeholder = 'Enter an activity';
-        }
-
-        // Ensure the remove button is visible for the new item
-        if (removeBtn) {
-          removeBtn.style.display = 'inline-flex'; // Make sure it's visible
-        }
-
-        activityList.appendChild(newActivityItem);
-        updateRemoveButtons(); // Update visibility for all buttons
-        if (input) {
-          input.focus(); // Focus the newly added input
-        }
-      });
-
-      // Use event delegation for remove buttons
-      activityList.addEventListener('click', function(e) {
-        // Find the closest remove button ancestor or the button itself
-        const removeButton = e.target.closest('.remove-activity-btn');
-        if (removeButton) {
-          const itemToRemove = removeButton.closest('.activity-item');
-          if (itemToRemove) {
-            itemToRemove.remove();
-            updateRemoveButtons(); // Update visibility after removal
-          }
-        }
-      });
-
-      // Initial check for remove buttons on page load
-      updateRemoveButtons();
+       activityList.addEventListener('click', function(e) {
+         const removeButton = e.target.closest('.remove-activity-btn');
+         if (removeButton) {
+           const itemToRemove = removeButton.closest('.activity-item');
+           if (itemToRemove) { itemToRemove.remove(); updateRemoveButtons(); }
+         }
+       });
+       updateRemoveButtons(); // Initial check
     }
 
   });
