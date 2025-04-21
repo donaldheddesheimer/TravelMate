@@ -57,4 +57,4 @@ def trip_delete(request, trip_id):
     if request.method == 'POST':
         trip.delete()
         return redirect('trips:list')
-    return render(request, 'trips/trip_confirm_delete.html', {'trip': trip})
+    return render(request, 'trips/trip_list.html', {'trip': trip})
