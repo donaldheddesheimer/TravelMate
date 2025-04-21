@@ -11,7 +11,7 @@ def signup(request):
             form.save()
             username = form.cleaned_data.get('username')
             messages.success(request, f'Your account is created, {username}!')
-            return redirect('accounts:login')  # Use the proper namespaced URL name
+            return redirect('login')  # Use the proper namespaced URL name
     else:
         form = CustomUserCreationForm()
     return render(request, 'accounts/signup.html', {'form': form})
@@ -31,7 +31,7 @@ def edit_profile(request):
             user_form.save()
             profile_form.save()
             messages.success(request, 'Your profile has been updated.')
-            return redirect('accounts:profile')
+            return redirect('profile')
     else:
         user_form = UserForm(instance=user)
         profile_form = ProfileForm(instance=profile)

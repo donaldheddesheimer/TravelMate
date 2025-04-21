@@ -32,14 +32,14 @@
         <!-- Regular buttons for desktop -->
         <div class="navbar__buttons">
           {% if user.is_authenticated %}
-            <a href="{% url 'accounts:profile' %}" class="navbar__button">Profile</a>
+            <a href="{% url 'profile' %}" class="navbar__button">Profile</a>
             <a href="{% url 'trips:list' %}" class="navbar__button">View Trips</a>
-            <form method="post" action="{% url 'accounts:logout' %}" style="display:inline;">
+            <form method="post" action="{% url 'logout' %}" style="display:inline;">
               {% csrf_token %}
               <button type="submit" class="navbar__button navbar__button--primary">Logout</button>
             </form>
           {% else %}
-            <a href="{% url 'accounts:login' %}" class="navbar__button navbar__button">Login</a>
+            <a href="{% url 'login' %}" class="navbar__button navbar__button">Login</a>
           {% endif %}
         </div>
       </div>
@@ -47,11 +47,11 @@
       <!-- Mobile dropdown menu -->
       <div class="navbar__dropdown">
         {% if user.is_authenticated %}
-          <a href="{% url 'accounts:profile' %}" class="navbar__dropdown-item">Profile</a>
+          <a href="{% url 'profile' %}" class="navbar__dropdown-item">Profile</a>
           <a href="{% url 'trips:list' %}" class="navbar__dropdown-item">View Trips</a>
-          <a href="{% url 'accounts:logout' %}" class="navbar__dropdown-item navbar__dropdown-item--primary">Logout</a>
+          <a href="{% url 'logout' %}" class="navbar__dropdown-item navbar__dropdown-item--primary">Logout</a>
         {% else %}
-          <a href="{% url 'accounts:login' %}" class="navbar__dropdown-item">Login</a>
+          <a href="{% url 'login' %}" class="navbar__dropdown-item">Login</a>
         {% endif %}
       </div>
     </nav>
