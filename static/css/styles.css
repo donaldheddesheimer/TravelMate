@@ -1073,3 +1073,147 @@ svg {
 .btn:hover {
   background: #ff5e41;
 }
+
+/* ===================================================================== */
+/*                         Activities Section Styles                     */
+/* ===================================================================== */
+
+#activities-section {
+  margin-top: 1.5rem; /* Add some space above the activities section */
+  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Optional separator line */
+  padding-top: 1.5rem; /* Space below the line */
+}
+
+.activities-label {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8); /* Slightly less prominent than main labels */
+}
+
+#activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* Space between activity input rows */
+  margin-bottom: 1rem; /* Space below the list before the add button */
+}
+
+.activity-item {
+  display: flex;
+  align-items: center; /* Vertically align input and remove button */
+  gap: 0.75rem; /* Space between input and remove button */
+}
+
+/* Make the activity input wrapper take up available space */
+.activity-input-wrapper {
+  flex-grow: 1;
+  position: relative; /* Needed for absolute positioning of icon */
+}
+
+/* Style the activity input field like other inputs but maybe slightly smaller padding */
+.activity-input {
+  width: 100%;
+  padding: 0.9rem 1rem 0.9rem 3rem; /* Adjust padding: top/bottom, right, left (for icon) */
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px; /* Slightly smaller radius */
+  color: white;
+  font-size: 0.95rem; /* Slightly smaller font */
+  transition: all 0.3s ease;
+}
+
+.activity-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px rgba(255, 76, 36, 0.2);
+}
+
+/* Adjust icon position for activity input */
+.activity-input-wrapper .input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.6);
+  pointer-events: none; /* Prevent icon from interfering with input focus */
+  transition: color 0.3s ease;
+}
+
+.activity-input:focus + .input-icon { /* Use sibling selector if icon is *after* input */
+   /* If icon is *inside* wrapper but not sibling, this won't work directly. */
+   /* Keep JS to handle icon color change on focus/blur if needed, or adjust structure */
+}
+
+/* Style the remove button */
+.remove-activity-btn {
+  display: inline-flex; /* Use flex to center icon inside */
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem; /* Small padding */
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%; /* Make it circular */
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.remove-activity-btn:hover {
+  background-color: rgba(255, 80, 80, 0.3); /* Reddish background on hover */
+  color: #ff6b6b; /* Lighter red color */
+}
+
+.remove-activity-btn svg {
+  width: 18px; /* Control icon size */
+  height: 18px;
+}
+
+/* Style the add activity button */
+.add-activity-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  margin-top: 0.5rem; /* Space above the add button */
+}
+
+.add-activity-btn:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.add-activity-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Ensure the input-wrapper takes precedence for positioning */
+.activity-item .input-wrapper {
+    position: relative; /* Reaffirm position relative */
+    flex-grow: 1;
+}
+
+/* Adjust label positioning if using floating labels (not used here, but for context) */
+/*
+.activity-input-wrapper input:focus + label,
+.activity-input-wrapper input:not(:placeholder-shown) + label {
+  top: 0.3rem;
+  font-size: 0.7rem;
+}
+*/
+
+/* Hide remove button visually but keep it accessible if needed, or use display: none */
+.remove-activity-btn[style*="display: none"] {
+    /* Could use opacity: 0; pointer-events: none; if needed for transitions */
+}

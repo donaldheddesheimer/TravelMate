@@ -17,6 +17,14 @@ def trip_create(request):
             trip = form.save(commit=False)
             trip.user = request.user
             trip.save()
+            # Process activities
+            activities = request.POST.getlist('activities')
+            if activities:
+                # Filter out empty activities
+                valid_activities = [act.strip() for act in activities if act.strip()]
+                if valid_activities:
+                    trip.activities = "\n".join(valid_activities)
+                    trip.save()
             return redirect('trips:list')
     else:
         form = TripForm()

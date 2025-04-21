@@ -18,6 +18,8 @@
       <div class="form-group">
         <div class="input-wrapper">
           {{ form.destination }}
+          {# Add placeholder and list directly to the widget in forms.py for cleaner template #}
+          {# Or keep the datalist here if preferred #}
           <datalist id="destinationOptions">
             <option value="New York, USA">
             <option value="London, UK">
@@ -54,6 +56,39 @@
         </div>
       </div>
 
+      <!-- Activities Section -->
+      <div class="form-group" id="activities-section">
+        <label class="activities-label">Activities (Optional)</label>
+        <div id="activity-list">
+          <!-- Initial Activity Input -->
+          <div class="activity-item">
+            <div class="input-wrapper activity-input-wrapper">
+              <input type="text" name="activities" placeholder="Enter an activity" class="activity-input">
+              <span class="input-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5H2zM3 3H2v1h1V3z"/>
+                  <path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9z"/>
+                  <path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5V7zM2 7h1v1H2V7zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5H2zm1 .5H2v1h1v-1z"/>
+                </svg>
+              </span>
+            </div>
+            <button type="button" class="remove-activity-btn" aria-label="Remove activity" style="display: none;"> <!-- Hidden for the first item -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button type="button" id="add-activity-btn" class="add-activity-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+          </svg>
+          <span>Add Activity</span>
+        </button>
+      </div>
+      <!-- End Activities Section -->
+
+
       <button type="submit" class="add-trip-button add-trip-button--glow">
         <span>Create Trip</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -72,58 +107,126 @@
     const dateLeaving = document.getElementById('id_date_leaving');
     const dateReturn = document.getElementById('id_date_returning');
     const form = document.querySelector('form');
+    const activityList = document.getElementById('activity-list');
+    const addActivityBtn = document.getElementById('add-activity-btn');
 
-    // Enhanced placeholder behavior
+    // --- Existing JS ---
+    // Enhanced placeholder behavior for destination
     if (destinationInput) {
+      const initialPlaceholder = 'Enter destination'; // Store initial placeholder
+      destinationInput.placeholder = initialPlaceholder;
+      destinationInput.setAttribute('list', 'destinationOptions');
+
       destinationInput.addEventListener('focus', function() {
         this.placeholder = 'Start typing to see suggestions...';
-        this.setAttribute('data-placeholder', this.placeholder);
       });
 
       destinationInput.addEventListener('blur', function() {
-        this.placeholder = this.value ? '' : 'Enter destination';
-        this.setAttribute('data-placeholder', this.placeholder);
+        if (!this.value) {
+          this.placeholder = initialPlaceholder;
+        }
       });
-
-      // Initialize placeholder
-      destinationInput.placeholder = 'Enter destination';
-      destinationInput.setAttribute('list', 'destinationOptions');
     }
 
-    // Date validation
+    // Date validation and min date setting
     if (form && dateLeaving && dateReturn) {
+      const today = new Date().toISOString().split('T')[0];
+      dateLeaving.min = today;
+      // Set initial min for return date only if leaving date has a value
+      if (dateLeaving.value) {
+        dateReturn.min = dateLeaving.value > today ? dateLeaving.value : today;
+      } else {
+         dateReturn.min = today;
+      }
+
+
+      dateLeaving.addEventListener('change', function() {
+        // Ensure return date min is not before today, even if leaving date is today
+        const leavingValue = this.value;
+        dateReturn.min = leavingValue >= today ? leavingValue : today;
+        // If return date is now invalid, clear it (optional)
+        if (dateReturn.value && dateReturn.value < dateReturn.min) {
+            dateReturn.value = '';
+        }
+      });
+
       form.addEventListener('submit', function(e) {
-        const today = new Date();
-        const leavingDate = new Date(dateLeaving.value);
-        const returnDate = new Date(dateReturn.value);
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0); // Compare dates only
 
-        today.setHours(0, 0, 0, 0);
-
-        if (leavingDate < today) {
-          alert("The departure date must be in the future.");
+        // Re-check min dates on submit as they might be bypassed
+        if (dateLeaving.value && new Date(dateLeaving.value) < todayDate) {
+          alert("The departure date cannot be in the past.");
           e.preventDefault();
           dateLeaving.focus();
           return;
         }
 
-        if (returnDate < leavingDate) {
-          alert("The return date must be after the departure date.");
+        if (dateLeaving.value && dateReturn.value && new Date(dateReturn.value) < new Date(dateLeaving.value)) {
+          alert("The return date must be on or after the departure date.");
           e.preventDefault();
           dateReturn.focus();
           return;
         }
       });
-
-      // Set minimum date for date inputs to today
-      const today = new Date().toISOString().split('T')[0];
-      dateLeaving.min = today;
-      dateReturn.min = today;
-
-      // Update return date min when departure date changes
-      dateLeaving.addEventListener('change', function() {
-        dateReturn.min = this.value;
-      });
     }
+
+    // --- New JS for Activities ---
+    if (activityList && addActivityBtn) {
+      const updateRemoveButtons = () => {
+        const activityItems = activityList.querySelectorAll('.activity-item');
+        activityItems.forEach((item, index) => {
+          const removeBtn = item.querySelector('.remove-activity-btn');
+          if (removeBtn) {
+            // Show remove button only if there's more than one activity item
+            removeBtn.style.display = activityItems.length > 1 ? 'inline-flex' : 'none';
+          }
+        });
+      };
+
+      addActivityBtn.addEventListener('click', function() {
+        const firstActivityItem = activityList.querySelector('.activity-item');
+        if (!firstActivityItem) return; // Should not happen, but safe check
+
+        const newActivityItem = firstActivityItem.cloneNode(true);
+        const input = newActivityItem.querySelector('input[name="activities"]');
+        const removeBtn = newActivityItem.querySelector('.remove-activity-btn');
+
+        // Clear the input value and reset placeholder for the new item
+        if (input) {
+          input.value = '';
+          input.placeholder = 'Enter an activity';
+        }
+
+        // Ensure the remove button is visible for the new item
+        if (removeBtn) {
+          removeBtn.style.display = 'inline-flex'; // Make sure it's visible
+        }
+
+        activityList.appendChild(newActivityItem);
+        updateRemoveButtons(); // Update visibility for all buttons
+        if (input) {
+          input.focus(); // Focus the newly added input
+        }
+      });
+
+      // Use event delegation for remove buttons
+      activityList.addEventListener('click', function(e) {
+        // Find the closest remove button ancestor or the button itself
+        const removeButton = e.target.closest('.remove-activity-btn');
+        if (removeButton) {
+          const itemToRemove = removeButton.closest('.activity-item');
+          if (itemToRemove) {
+            itemToRemove.remove();
+            updateRemoveButtons(); // Update visibility after removal
+          }
+        }
+      });
+
+      // Initial check for remove buttons on page load
+      updateRemoveButtons();
+    }
+
   });
 </script>
 {% endblock %}
