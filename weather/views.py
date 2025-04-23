@@ -1,4 +1,5 @@
 import requests
+from trips.models import Trip
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
@@ -6,27 +7,32 @@ from datetime import datetime, timedelta
 
 # Create your views here.
 @require_GET
-def get_weather_view(request):
-    query = request.GET.get('city')
-    if not query:
-        return JsonResponse({"error": "query parameter is required"}, status=400)
-    geo_url = f"https://api.radar.io/v1/geocode/forward?query={query}&limit=1"
-    headers = {
-        "Authorization" : settings.GEOCODE_API_KEY
-    }
-    response = requests.get(geo_url, headers=headers)
-    if response.status_code != 200:
-        return JsonResponse({"error": "failed to geocode address"}, status=response.status_code)
-    geocode_results = response.json()
+def get_weather_view(request, trip_id):
+    trip = Trip.objects.get(pk=trip_id)
+    destination = trip.destination.split(',')[0].strip()
 
-    if len(geocode_results.get("addresses", [])) == 0:
-        return JsonResponse({"error": "No addresses found"})
-    country = geocode_results['addresses'][0]['country']
-    city = geocode_results["addresses"][0].get('formattedAddress')
-    latitude =geocode_results["addresses"][0]['geometry']['coordinates'][1]
-    longitude = geocode_results["addresses"][0]['geometry']['coordinates'][0]
+    geo_url = "http://api.openweathermap.org/geo/1.0/direct"
+    geo_params = {
+            'q': destination,
+            'limit': 1,
+            'appid': settings.OWM_API_KEY
+        }
+        
+    geo_response = requests.get(geo_url, params=geo_params)
+    if geo_response.status_code != 200:
+        return JsonResponse({"error": "Failed to geocode location"}, status=geo_response.status_code)
+            
+    geo_data = geo_response.json()
+    if not geo_data:
+        return JsonResponse({"error": "Location not found"}, status=404)
+            
+    location = geo_data[0]
+    lat = location['lat']
+    lon = location['lon']
+    country = location.get('country', '')
+    city = location.get('name', destination)
 
-    weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&units=imperial&appid={settings.OWM_API_KEY}"
+    weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=imperial&appid={settings.OWM_API_KEY}"
 
     weather_response = requests.get(weather_url)
 
