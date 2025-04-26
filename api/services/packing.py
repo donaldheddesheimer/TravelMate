@@ -1,155 +1,130 @@
+# api/services/packing.py (was packing.py)
+
+import openai
 import json
 import logging
+from django.conf import settings
 from datetime import timedelta
-from .ai import DeepSeekService
 
 logger = logging.getLogger(__name__)
 
 class PackingListGenerator:
     @staticmethod
-    def generate_packing_list(trip):
-        logger.info(f"Starting packing list generation for trip to {trip.destination}")
-        
-        # Get weather data for the trip
-        weather_data = ""
-        if hasattr(trip, 'weather_data') and trip.weather_data:
-            weather_data = f"Average temperature: {trip.weather_data.get('temp', 'unknown')}°F, " \
-                          f"Conditions: {trip.weather_data.get('conditions', 'unknown')}"
-            logger.info(f"Found weather data: {weather_data}")
-        else:
-            weather_data = "Weather information not available"
-            logger.info("No weather data available for trip")
+    def generate_packing_list(trip, weather_summary): # <-- Add weather_summary parameter
+        """
+        Generates a packing list using OpenAI based on trip details and weather.
 
-        prompt = f"""Create a comprehensive packing list for a trip to {trip.destination} from {trip.date_leaving} to {trip.date_returning}.
-        Trip Details:
-        - Destination: {trip.destination}
-        - Duration: {(trip.date_returning - trip.date_leaving).days} days
-        - Activities: {trip.activities or 'Not specified'}
-        - Weather: {weather_data}
+        Args:
+            trip: The Trip object.
+            weather_summary (str): A concise string describing the weather forecast.
 
-        Consider the following:
-        1. Essential items for the destination and activities
-        2. Appropriate clothing for the weather
-        3. Travel documents and electronics
-        4. Toiletries and personal items
-        5. Any special items needed for activities
+        Returns:
+            str: The raw JSON string response from OpenAI or a JSON string containing an error.
+        """
+        openai.api_key = settings.OPENAI_API_KEY # Ensure API key is set
 
-        Return the response in this EXACT JSON format (no variations in key names):
+        # Use the provided weather_summary in the prompt
+        prompt = f"""Create a detailed packing list in JSON format for a trip to {trip.destination} from {trip.date_leaving.strftime('%Y-%m-%d')} to {trip.date_returning.strftime('%Y-%m-%d')}.
+
+Consider the following details:
+Destination: {trip.destination}
+Dates: {trip.date_leaving.strftime('%b %d, %Y')} to {trip.date_returning.strftime('%b %d, %Y')}
+Planned Activities: {trip.activities or 'General tourism and leisure'}
+Weather Forecast Summary: {weather_summary}
+
+The output MUST be a valid JSON object containing a single key "categories".
+The "categories" key should hold a list of category objects.
+Each category object should have a "name" (string) and an "items" (list) key.
+Each item object in the "items" list should have:
+- "name" (string, required): The name of the item.
+- "quantity" (integer, optional, default 1): How many of this item.
+- "essential" (boolean, optional, default false): Is this item essential (e.g., passport, medications)? Mark essentials as true.
+- "notes" (string, optional): Brief notes (e.g., 'Waterproof', 'For evening wear').
+- "for_day" (string, optional): If item is specific to a day, provide date in 'YYYY-MM-DD' format. Only use if truly day-specific.
+
+Example JSON structure:
+{{
+    "categories": [
         {{
-            "categories": [
-                {{
-                    "name": "Category Name",
-                    "items": [
-                        {{
-                            "name": "Item name",
-                            "quantity": 1,
-                            "essential": true,
-                            "notes": "Optional notes about the item",
-                            "for_day": "YYYY-MM-DD"  // Optional, only if item is for a specific day
-                        }}
-                    ]
-                }}
+            "name": "Clothing",
+            "items": [
+                {{"name": "T-shirts", "quantity": 5, "essential": false, "notes": "Breathable fabric"}},
+                {{"name": "Jeans", "quantity": 1, "essential": false}},
+                {{"name": "Rain Jacket", "quantity": 1, "essential": true, "notes": "Check weather forecast daily"}}
+            ]
+        }},
+        {{
+            "name": "Toiletries",
+            "items": [
+                {{"name": "Toothbrush", "quantity": 1, "essential": true}},
+                {{"name": "Travel-size Shampoo", "quantity": 1, "essential": false}}
+            ]
+        }},
+        {{
+            "name": "Documents & Money",
+            "items": [
+                {{"name": "Passport", "quantity": 1, "essential": true}},
+                {{"name": "Local Currency", "quantity": 1, "essential": true, "notes": "Some cash recommended"}}
+            ]
+        }},
+        {{
+            "name": "Medications",
+            "items": [
+                {{"name": "Prescription Medication", "quantity": 1, "essential": true, "notes": "Bring prescription copy"}},
+                {{"name": "Pain Relievers", "quantity": 1, "essential": false}}
             ]
         }}
+        // ... other relevant categories like Electronics, Gear (if activities specified), etc.
+    ]
+}}
 
-        Important:
-        1. Use EXACTLY these key names: "categories", "items", "name", "quantity", "essential", "notes", "for_day"
-        2. Do NOT use variations like "category", "item", or "note"
-        3. Include all essential travel items
-        4. Consider the trip duration and weather
-        5. Include items specific to the activities
-        6. Return valid JSON format
-        7. Include at least 3 categories with multiple items each"""
+Generate the packing list now based on the trip details and weather. Ensure the output is ONLY the JSON object.
+"""
 
         try:
-            logger.info("Calling DeepSeek AI service")
-            response = DeepSeekService.chat_completion(
+            logger.info(f"Sending packing list request to OpenAI for trip {trip.id} to {trip.destination}")
+            # Use the newer chat completions endpoint if possible
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo", # Or gpt-4 if available/preferred
                 messages=[
-                    {"role": "system", "content": "You are a travel assistant that creates detailed and practical packing lists. Always return valid JSON with the exact key names specified."},
+                    {"role": "system", "content": "You are a travel assistant. Your task is to generate a packing list in JSON format based on the user's trip details, activities, and weather forecast. Output ONLY the JSON object."},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                temperature=0.6, # Adjust temperature for creativity vs consistency
+                max_tokens=1500 # Adjust as needed based on expected list size
             )
-            logger.info("Received response from AI service")
 
-            # Validate the response is valid JSON
-            try:
-                data = json.loads(response)
-                logger.info("Successfully validated JSON response")
-                
-                # Normalize the response structure
-                if 'category' in data:
-                    data['categories'] = data.pop('category')
-                if isinstance(data.get('categories'), list):
-                    for category in data['categories']:
-                        if 'item' in category:
-                            category['items'] = category.pop('item')
-                        if isinstance(category.get('items'), list):
-                            for item in category['items']:
-                                if 'note' in item:
-                                    item['notes'] = item.pop('note')
-                
-                # Validate the structure
-                if not isinstance(data, dict) or 'categories' not in data:
-                    logger.error(f"Invalid response structure: {data}")
-                    return None
-                    
-                for category in data['categories']:
-                    if not isinstance(category, dict) or 'name' not in category or 'items' not in category:
-                        logger.error(f"Invalid category structure: {category}")
-                        return None
-                        
-                    for item in category['items']:
-                        if not isinstance(item, dict) or 'name' not in item:
-                            logger.error(f"Invalid item structure: {item}")
-                            return None
-                
-                return json.dumps(data)
-            except json.JSONDecodeError:
-                logger.warning("Initial JSON validation failed, attempting to clean response")
-                # If the response is not valid JSON, try to fix it
-                try:
-                    # Remove any markdown code block markers
-                    response = response.replace('```json', '').replace('```', '').strip()
-                    # Validate the fixed response
-                    data = json.loads(response)
-                    
-                    # Normalize the response structure
-                    if 'category' in data:
-                        data['categories'] = data.pop('category')
-                    if isinstance(data.get('categories'), list):
-                        for category in data['categories']:
-                            if 'item' in category:
-                                category['items'] = category.pop('item')
-                            if isinstance(category.get('items'), list):
-                                for item in category['items']:
-                                    if 'note' in item:
-                                        item['notes'] = item.pop('note')
-                    
-                    # Validate the structure
-                    if not isinstance(data, dict) or 'categories' not in data:
-                        logger.error(f"Invalid response structure after cleaning: {data}")
-                        return None
-                        
-                    for category in data['categories']:
-                        if not isinstance(category, dict) or 'name' not in category or 'items' not in category:
-                            logger.error(f"Invalid category structure after cleaning: {category}")
-                            return None
-                            
-                        for item in category['items']:
-                            if not isinstance(item, dict) or 'name' not in item:
-                                logger.error(f"Invalid item structure after cleaning: {item}")
-                                return None
-                    
-                    logger.info("Successfully cleaned and validated JSON response")
-                    return json.dumps(data)
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse JSON after cleaning: {str(e)}")
-                    logger.error(f"Cleaned response: {response}")
-                    return None
-                except Exception as e:
-                    logger.error(f"Unexpected error while cleaning JSON: {str(e)}")
-                    return None
+            content = response.choices[0].message.content.strip()
+            # Sometimes the model might wrap the JSON in markdown ```json ... ```
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip() # Remove leading/trailing whitespace
 
+            # Basic validation: Check if it looks like JSON
+            if not (content.startswith('{') and content.endswith('}')):
+                 logger.warning(f"OpenAI response for trip {trip.id} doesn't look like JSON: {content[:100]}...")
+                 # Attempt to find JSON within the response (simple heuristic)
+                 json_start = content.find('{')
+                 json_end = content.rfind('}')
+                 if json_start != -1 and json_end != -1 and json_start < json_end:
+                     content = content[json_start:json_end+1]
+                     logger.info(f"Extracted potential JSON from response for trip {trip.id}")
+                 else:
+                     # If still not JSON, return an error structure
+                     logger.error(f"Could not extract valid JSON from OpenAI response for trip {trip.id}")
+                     return json.dumps({"error": "AI response was not in the expected JSON format."})
+
+
+            logger.info(f"Received packing list response from OpenAI for trip {trip.id}")
+            return content
+
+        except openai.error.OpenAIError as e:
+            logger.error(f"OpenAI API error during packing list generation for trip {trip.id}: {e}", exc_info=True)
+            # Return a JSON string with an error message
+            return json.dumps({"error": f"Failed to communicate with AI service: {e}"})
         except Exception as e:
-            logger.error(f"Error in PackingListGenerator: {str(e)}", exc_info=True)
-            return None
+            logger.error(f"An unexpected error occurred during OpenAI call for trip {trip.id}: {e}", exc_info=True)
+            # Return a JSON string with an error message
+            return json.dumps({"error": "An unexpected error occurred during AI generation."})
