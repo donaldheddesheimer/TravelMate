@@ -13,6 +13,9 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -172,3 +175,36 @@ OWM_API_KEY = os.getenv('OWM_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 GEOCODE_API_KEY = os.getenv('GEOCODE_API_KEY')
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+        },
+        'api': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+}
