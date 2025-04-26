@@ -32,6 +32,9 @@
         <!-- Regular buttons for desktop -->
         <div class="navbar__buttons">
           {% if user.is_authenticated %}
+            {% if user.is_staff %} {# <-- Added Admin button check #}
+              <a href="{% url 'admin:index' %}" class="navbar__button">Admin</a>
+            {% endif %}
             <a href="{% url 'profile' %}" class="navbar__button">Profile</a>
             <a href="{% url 'trips:list' %}" class="navbar__button">View Trips</a>
             <form method="post" action="{% url 'logout' %}" style="display:inline;">
@@ -47,6 +50,9 @@
       <!-- Mobile dropdown menu -->
       <div class="navbar__dropdown">
         {% if user.is_authenticated %}
+          {% if user.is_staff %} {# <-- Added Admin button check #}
+            <a href="{% url 'admin:index' %}" class="navbar__dropdown-item">Admin</a>
+          {% endif %}
           <a href="{% url 'profile' %}" class="navbar__dropdown-item">Profile</a>
           <a href="{% url 'trips:list' %}" class="navbar__dropdown-item">View Trips</a>
           <a href="{% url 'logout' %}" class="navbar__dropdown-item navbar__dropdown-item--primary">Logout</a>
@@ -69,10 +75,12 @@
       const hamburger = document.querySelector('.navbar__hamburger');
       const dropdown = document.querySelector('.navbar__dropdown');
 
-      hamburger.addEventListener('click', function() {
-        this.classList.toggle('is-active');
-        dropdown.classList.toggle('is-open');
-      });
+      if (hamburger && dropdown) { // Add checks to ensure elements exist
+          hamburger.addEventListener('click', function() {
+            this.classList.toggle('is-active');
+            dropdown.classList.toggle('is-open');
+          });
+      }
     });
     </script>
 </body>
