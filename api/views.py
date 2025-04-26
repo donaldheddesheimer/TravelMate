@@ -6,6 +6,11 @@ from .services import weather
 from .services.places import GooglePlacesService
 from .services.ai import DeepSeekService
 from django.views.decorators.cache import cache_page
+from api.services.packing import PackingListGenerator
+from trips.models import Trip
+import json
+from django.conf import settings
+
 
 @api_view(['GET'])
 @cache_page(60 * 15)
@@ -16,6 +21,7 @@ def weather_forecast(request):
     date = request.GET.get('date')
     data = weather.WeatherService.get_forecast(lat, lon, date)
     return Response(data)
+
 
 @api_view(['GET'])
 @cache_page(60 * 15)
@@ -49,27 +55,29 @@ def place_search(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+
 @api_view(['GET'])
 @cache_page(60 * 15)
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def place_autocomplete(request):
     query = request.GET.get('q')
+    
     if not query or len(query) < 2:
         return Response({'suggestions': []})
 
     try:
-        # Get user's approximate location if available
+        if not settings.GOOGLE_API_KEY:
+            return Response({'error': 'API key not configured'}, status=500)
+
         location = None
         if request.user.is_authenticated and hasattr(request.user, 'profile'):
             profile = request.user.profile
             if profile.location_lat and profile.location_lng:
                 location = f"{profile.location_lat},{profile.location_lng}"
 
-        # Get autocomplete suggestions
         data = GooglePlacesService.autocomplete(query, location)
-
-        # Format suggestions for frontend
         suggestions = []
+
         for suggestion in data.get('suggestions', []):
             if 'placePrediction' in suggestion:
                 suggestions.append({
@@ -87,6 +95,7 @@ def place_autocomplete(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+
 @api_view(['GET'])
 @cache_page(60 * 60 * 24)  # Cache for 24 hours
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
@@ -96,6 +105,7 @@ def place_details(request, place_id):
         return Response(data)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
 
 @api_view(['POST'])
 @cache_page(60 * 15)
@@ -116,3 +126,14 @@ def chatbot(request):
 
     reply = DeepSeekService.chat_completion(messages)
     return Response({'reply': reply})
+
+
+@api_view(['POST'])
+def generate_packing_list(request, trip_id):
+    trip = Trip.objects.get(pk=trip_id)
+    try:
+        ai_response = PackingListGenerator.generate_packing_list(trip)
+        packing_data = json.loads(ai_response)
+        return Response(packing_data)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)

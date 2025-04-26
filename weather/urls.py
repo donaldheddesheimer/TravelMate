@@ -1,5 +1,9 @@
 from django.urls import path
-from .views import get_weather_view
+from .views import get_weather_view, forecast_view
+
+app_name = 'weather'
+
 urlpatterns = [
-    path('weather/', get_weather_view, name="get_weather_view")
+    path('api/weather/', get_weather_view, name="api_weather"),
+    path('<int:trip_id>/', forecast_view, name="forecast"),
 ]
