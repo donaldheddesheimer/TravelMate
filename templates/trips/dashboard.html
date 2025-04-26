@@ -33,7 +33,10 @@
             <div class="card-content">
               <h3>Weather Forecast</h3>
               <div id="weather-widget" class="widget-content">
-                <p>Loading weather information...</p>
+                <div class="loading-spinner">
+                  <div class="spinner"></div>
+                  <p>Loading weather information...</p>
+                </div>
               </div>
               <a href="{% url 'weather:forecast' trip.id %}" class="btn btn-primary">View Full Forecast</a>
             </div>
@@ -66,24 +69,34 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Load basic weather info for the widget
     fetch(`/weather/api/weather/?city={{ trip.destination }}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to get weather data');
+            return response.json();
+        })
         .then(data => {
             if (!data.error) {
                 const widget = document.getElementById('weather-widget');
                 widget.innerHTML = `
                     <div class="weather-info">
-                        <div class="weather-temp">${Math.round(data.temp)}°F</div>
-                        <div class="weather-details">
-                            <span class="weather-condition">${data.weather_description}</span>
-                            <span class="weather-humidity">Humidity: ${data.humidity}%</span>
+                        <div class="weather-main">
+                            <div class="weather-icon-temp">
+                                <img src="https://openweathermap.org/img/wn/${data.weather_icon}@2x.png" alt="${data.weather_condition}">
+                                <div class="temperature">${Math.round(data.temp)}°F</div>
+                            </div>
                         </div>
                     </div>
                 `;
+            } else {
+                throw new Error(data.error);
             }
         })
         .catch(error => {
-            document.getElementById('weather-widget').innerHTML =
-                `<p class="error-message">Could not load weather data</p>`;
+            document.getElementById('weather-widget').innerHTML = `
+                <div class="weather-error">
+                    <p>Could not load weather data</p>
+                    <p>${error.message}</p>
+                </div>
+            `;
         });
 });
 </script>
@@ -261,34 +274,95 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .weather-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  padding: 1rem;
 }
 
-.weather-temp {
-  font-size: 2.5rem;
+.weather-main {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.weather-icon-temp {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.weather-icon-temp img {
+  width: 60px;
+  height: 60px;
+}
+
+.temperature {
+  font-size: 2rem;
   font-weight: 700;
 }
 
 .weather-details {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+}
+
+.weather-details h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
 }
 
 .weather-condition {
   text-transform: capitalize;
-  font-weight: 500;
+  margin: 0 0 0.5rem 0;
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.weather-humidity {
+.weather-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.7);
 }
 
-.error-message {
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--color-primary);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 1rem;
+}
+
+.weather-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
   color: #ff6b6b;
-  font-size: 0.9rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .weather-main {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .weather-icon-temp {
+    justify-content: center;
+  }
 }
 
 /* Button Styles */

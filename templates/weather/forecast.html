@@ -18,98 +18,165 @@
       <div id="weather-data">
         <div class="loading-spinner">
           <div class="spinner"></div>
-          <p>Loading weather data...</p>
+          <p>Loading weather forecast...</p>
         </div>
       </div>
+      <div id="last-updated" class="last-updated"></div>
     </div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const apiUrl = `/api/weather/?lat={{ trip.latitude }}&lon={{ trip.longitude }}&date={{ trip.date_leaving|date:"Y-m-d" }}`;
-    console.log("Fetching from:", apiUrl);
+    console.log('Page loaded, initializing weather forecast...');
+    
+    let lastUpdateTime = null;
+    let updateInterval = null;
+    
+    // Function to format time
+    function formatTime(date) {
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    }
 
-    fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('Failed to get weather data');
-            return response.json();
-        })
-        .then(weatherData => {
-            console.log("Received data:", weatherData);
-            const weatherDiv = document.getElementById('weather-data');
-
-            if (weatherData.error) {
-                throw new Error(weatherData.error);
-            }
-
-            // Group by day
-            const dailyForecast = {};
-            weatherData.list.forEach(item => {
-                const date = new Date(item.dt * 1000).toLocaleDateString();
-                if (!dailyForecast[date]) {
-                    dailyForecast[date] = {
-                        date: new Date(item.dt * 1000).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric'
-                        }),
-                        items: [],
-                        max: item.main.temp,
-                        min: item.main.temp,
-                        icon: item.weather[0].icon
-                    };
+    // Function to update the last updated timestamp
+    function updateTimestamp() {
+        const now = new Date();
+        const nextUpdate = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+        
+        const lastUpdatedDiv = document.getElementById('last-updated');
+        lastUpdatedDiv.innerHTML = `
+            <p>Last updated: ${formatTime(now)}</p>
+            <p>Next update: ${formatTime(nextUpdate)}</p>
+        `;
+        
+        lastUpdateTime = now;
+        console.log(`Updated timestamp: ${formatTime(now)}, Next update: ${formatTime(nextUpdate)}`);
+    }
+    
+    // Function to fetch weather data
+    function fetchWeatherData() {
+        console.log('Fetching weather data...');
+        const loadingDiv = document.getElementById('weather-data');
+        loadingDiv.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading weather forecast...</p>
+            </div>
+        `;
+        
+        const url = `/api/weather/?destination={{ trip.destination }}&start_date={{ trip.date_leaving|date:"Y-m-d" }}&end_date={{ trip.date_returning|date:"Y-m-d" }}`;
+        console.log(`Making request to: ${url}`);
+        
+        fetch(url)
+            .then(response => {
+                console.log(`Response status: ${response.status}`);
+                if (!response.ok) {
+                    console.error('Response not OK:', response.status, response.statusText);
+                    throw new Error('Failed to get weather forecast');
                 }
-                dailyForecast[date].items.push(item);
-                dailyForecast[date].max = Math.max(dailyForecast[date].max, item.main.temp);
-                dailyForecast[date].min = Math.min(dailyForecast[date].min, item.main.temp);
-            });
-
-            // Display forecast
-            weatherDiv.innerHTML = `
-                <div class="current-weather">
-                    <h2>${weatherData.city.name}</h2>
-                    <p>Trip Duration: ${weatherData.trip_duration} days</p>
-                </div>
-                <div class="forecast-header">
-                    <h3>Daily Forecast</h3>
-                </div>
-                <div class="daily-forecast">
-                    ${Object.values(dailyForecast).map(day => `
-                        <div class="forecast-day">
-                            <p class="forecast-date">${day.date}</p>
-                            <img src="https://openweathermap.org/img/wn/${day.icon}@2x.png">
-                            <p class="forecast-temp">
-                                ${Math.round(day.max)}° / ${Math.round(day.min)}°
-                            </p>
-                            <div class="hourly-forecast">
-                                ${day.items.slice(0, 4).map(item => `
-                                    <div class="hourly-item">
-                                        <p>${new Date(item.dt * 1000).toLocaleTimeString([], {hour: '2-digit'})}</p>
-                                        <p>${Math.round(item.main.temp)}°</p>
-                                        <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png">
+                return response.json();
+            })
+            .then(weatherData => {
+                console.log('Weather data received:', weatherData);
+                if (!weatherData.error) {
+                    const weatherDiv = document.getElementById('weather-data');
+                    
+                    // Create current weather section
+                    const currentDay = weatherData.forecast[0];
+                    const currentWeather = `
+                        <div class="current-weather">
+                            <div class="weather-main">
+                                <div class="weather-icon-temp">
+                                    <img src="https://openweathermap.org/img/wn/${currentDay.icon}@2x.png" alt="${currentDay.conditions}" onerror="this.src='https://openweathermap.org/img/wn/01d@2x.png'">
+                                    <div class="temperature">${Math.round(currentDay.high_temp)}°F</div>
+                                </div>
+                                <div class="weather-details">
+                                    <h2>{{ trip.destination }}</h2>
+                                    <p class="weather-condition">${currentDay.conditions}</p>
+                                    <div class="weather-stats">
+                                        <span class="weather-temp-range">High: ${Math.round(currentDay.high_temp)}°F / Low: ${Math.round(currentDay.low_temp)}°F</span>
                                     </div>
-                                `).join('')}
+                                </div>
                             </div>
                         </div>
-                    `).join('')}
-                </div>
-            `;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('weather-data').innerHTML = `
-                <div class="weather-error">
-                    <p>Error loading weather data</p>
-                    <p>${error.message}</p>
-                </div>
-            `;
-        });
+                    `;
+
+                    // Create forecast section
+                    const forecastSection = `
+                        <div class="forecast-section">
+                            <h3>Forecast for Your Trip</h3>
+                            <div class="forecast-grid">
+                                ${weatherData.forecast.map(day => {
+                                    const date = new Date(day.date);
+                                    date.setDate(date.getDate() + 1);
+                                    const formattedDate = date.toLocaleDateString('en-US', {
+                                        weekday: 'short',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    });
+                                    return `
+                                    <div class="forecast-day">
+                                        <p class="forecast-date">${formattedDate}</p>
+                                        <img src="https://openweathermap.org/img/wn/${day.icon}@2x.png" alt="${day.conditions}" onerror="this.src='https://openweathermap.org/img/wn/01d@2x.png'">
+                                        <div class="forecast-temps">
+                                            <span class="high-temp">${Math.round(day.high_temp)}°F</span>
+                                            <span class="low-temp">${Math.round(day.low_temp)}°F</span>
+                                        </div>
+                                        <p class="forecast-conditions">${day.conditions}</p>
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+
+                    weatherDiv.innerHTML = currentWeather + forecastSection;
+                    updateTimestamp();
+                    console.log('Weather data displayed successfully');
+                } else {
+                    console.error('Weather data error:', weatherData.error);
+                    throw new Error(weatherData.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading weather forecast:', error);
+                document.getElementById('weather-data').innerHTML = `
+                    <div class="weather-error">
+                        <p>Error loading weather forecast</p>
+                        <p>${error.message}</p>
+                        <p>Please try refreshing the page.</p>
+                    </div>
+                `;
+            });
+    }
+    
+    // Initial fetch
+    fetchWeatherData();
+    
+    // Set up interval to check for updates
+    updateInterval = setInterval(() => {
+        const now = new Date();
+        if (lastUpdateTime && (now - lastUpdateTime) >= 60000) { // 1 minute
+            console.log('One minute has passed, refreshing weather data...');
+            fetchWeatherData();
+        }
+    }, 1000); // Check every second
+    
+    // Clean up interval on page unload
+    window.addEventListener('beforeunload', () => {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
 });
 </script>
 
 <style>
-/* Your existing CSS styles remain unchanged */
 .weather-wrapper {
     max-width: 1000px;
     margin: 2rem auto;
@@ -133,6 +200,13 @@ document.addEventListener('DOMContentLoaded', function() {
 .weather-header h1 {
     font-size: 2.2rem;
     margin-bottom: 0.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.weather-header p {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .back-link {
@@ -158,7 +232,6 @@ document.addEventListener('DOMContentLoaded', function() {
     display: flex;
     align-items: center;
     gap: 2rem;
-    margin-bottom: 1.5rem;
 }
 
 .weather-icon-temp {
@@ -193,37 +266,12 @@ document.addEventListener('DOMContentLoaded', function() {
     color: rgba(255, 255, 255, 0.8);
 }
 
-.forecast-header {
-    margin: 2rem 0 1rem 0;
-}
-
-.daily-forecast {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1rem;
-}
-
-.forecast-day {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.forecast-date {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.forecast-day img {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto;
-}
-
-.forecast-temp {
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
+.weather-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .loading-spinner {
@@ -254,10 +302,6 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #ff6b6b;
 }
 
-.weather-error svg {
-    margin-bottom: 1rem;
-}
-
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -268,41 +312,105 @@ document.addEventListener('DOMContentLoaded', function() {
         text-align: center;
     }
 
-    .daily-forecast {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    .weather-icon-temp {
+        justify-content: center;
+    }
+
+    .temperature {
+        font-size: 2.5rem;
+    }
+
+    .weather-details h2 {
+        font-size: 1.5rem;
     }
 }
 
-.daily-forecast {
+.weather-temp-range {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.forecast-section {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2rem;
+    border-radius: 12px;
+    margin-top: 2rem;
+}
+
+.forecast-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+}
+
+.forecast-grid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
 
 .forecast-day {
     background: rgba(255, 255, 255, 0.05);
     padding: 1rem;
     border-radius: 8px;
+    text-align: center;
+    transition: transform 0.3s ease;
 }
 
-.hourly-forecast {
+.forecast-day:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.forecast-date {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--color-primary);
+}
+
+.forecast-day img {
+    width: 50px;
+    height: 50px;
+    margin: 0.5rem auto;
+}
+
+.forecast-temps {
     display: flex;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 1rem;
+    margin: 0.5rem 0;
+}
+
+.high-temp {
+    font-weight: 600;
+    color: #ff6b6b;
+}
+
+.low-temp {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.forecast-conditions {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
     margin-top: 0.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
 }
 
-.hourly-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 50px;
+@media (max-width: 768px) {
+    .forecast-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
 }
 
-.hourly-item img {
-    width: 30px;
-    height: 30px;
+.last-updated {
+    text-align: center;
+    margin-top: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.last-updated p {
+    margin: 0.25rem 0;
 }
 </style>
 {% endblock %}

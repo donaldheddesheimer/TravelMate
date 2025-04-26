@@ -25,6 +25,7 @@ class DeepSeekService:
         }
 
         try:
+            logger.info(f"Sending request to AI service with messages: {messages}")
             response = requests.post(
                 url=cls.BASE_URL,
                 headers=headers,
@@ -32,11 +33,40 @@ class DeepSeekService:
                 timeout=10
             )
             response.raise_for_status()
+            
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+            logger.info(f"Received response from AI service: {data}")
+            
+            if not data.get("choices"):
+                logger.error("No choices in AI response")
+                raise ValueError("No choices in AI response")
+                
+            if not data["choices"][0].get("message"):
+                logger.error("No message in AI response choice")
+                raise ValueError("No message in AI response choice")
+                
+            content = data["choices"][0]["message"].get("content")
+            if not content:
+                logger.error("Empty content in AI response")
+                raise ValueError("Empty content in AI response")
+                
+            logger.info(f"Successfully extracted content from AI response: {content[:100]}...")
+            return content
+            
         except requests.exceptions.HTTPError as http_err:
-            logger.error(f"HTTP error occurred: {http_err} - Response: {response.text}")
-            raise
+            logger.error(f"HTTP error occurred: {http_err}")
+            logger.error(f"Response status: {response.status_code}")
+            logger.error(f"Response text: {response.text}")
+            raise ValueError(f"HTTP error from AI service: {http_err}")
+            
+        except requests.exceptions.Timeout:
+            logger.error("Request to AI service timed out")
+            raise ValueError("Request to AI service timed out")
+            
+        except requests.exceptions.RequestException as req_err:
+            logger.error(f"Request error occurred: {req_err}")
+            raise ValueError(f"Request error: {req_err}")
+            
         except Exception as err:
             logger.error(f"Unexpected error occurred: {err}")
-            raise
+            raise ValueError(f"Unexpected error: {err}")
