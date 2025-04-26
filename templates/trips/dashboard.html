@@ -46,7 +46,6 @@
             </div>
           </div>
 
-          <!-- Replace tips card with chatbot card -->
           <div class="assistant-card card">
             <div class="card-content">
               <h3>Need Help?</h3>
@@ -55,67 +54,308 @@
             </div>
           </div>
         </div>
+
+        <!-- Notification Test Area (Staff Only) -->
+        {% if user.is_staff %}
+        <div class="notification-test-area" style="margin-top: 2rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 8px; text-align: center;">
+            <h4>Staff Controls</h4>
+            <button id="test-notification-btn" class="btn btn-secondary">Test Weather Notification</button>
+             <p style="font-size: 0.8rem; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.7);">Click to test the in-page notification using the latest loaded weather data.</p>
+        </div>
+        {% endif %}
+
       {% endblock %}
     </div>
   </div>
 </div>
 
-<!-- Add JavaScript for weather widget -->
+<!-- In-Page Notification Element -->
+<div id="in-page-notification" class="notification-toast" role="alert" aria-live="polite">
+    <div class="notification-content">
+        <strong id="notification-title">Notification Title</strong>
+        <p id="notification-message" style="margin: 5px 0 0 0;">Notification message goes here.</p>
+    </div>
+    <button class="notification-close-btn" aria-label="Close notification">×</button>
+</div>
+
+
+<!-- Add JavaScript for weather widget AND notifications -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const city = "{{ trip.destination|escapejs }}"; // Use escapejs for safety in JS strings
-    const startDate = "{{ trip.date_leaving|date:'Y-m-d' }}"; // Format date as YYYY-MM-DD
-    const endDate = "{{ trip.date_returning|date:'Y-m-d' }}"; // Format date as YYYY-MM-DD
-
-    // Construct the URL for the AJAX request - ensure this path matches your urls.py
+    const city = "{{ trip.destination|escapejs }}";
+    const startDate = "{{ trip.date_leaving|date:'Y-m-d' }}";
+    const endDate = "{{ trip.date_returning|date:'Y-m-d' }}";
     const apiUrl = `/weather/api/weather/?city=${encodeURIComponent(city)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+    const weatherWidget = document.getElementById('weather-widget');
+    const checkInterval = 30 * 60 * 1000; // Check every 30 minutes
+    let lastKnownWeatherSignature = null; // Store a signature of the weather data
+    let latestValidWeatherData = null; // <<< Added: To store the first item of the last valid weather list
 
-    console.log("Fetching weather for widget:", apiUrl);
+    // --- In-Page Notification Elements and Logic ---
+    const notificationElement = document.getElementById('in-page-notification');
+    const notificationTitle = document.getElementById('notification-title');
+    const notificationMessage = document.getElementById('notification-message');
+    const notificationCloseBtn = notificationElement.querySelector('.notification-close-btn');
+    let notificationTimeoutId = null; // To store the timeout for auto-hiding
 
-    fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) {
-                // Try to get error message from JSON response body
-                return response.json().then(errData => {
-                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
-                }).catch(() => {
-                    // If response is not JSON or parsing fails, throw generic error
-                     throw new Error(`HTTP error! status: ${response.status}`);
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Widget Weather Data:", data);
-            const widget = document.getElementById('weather-widget');
-            if (data.error) {
-                 widget.innerHTML = `<p class="error-message">Error: ${data.error}</p>`;
-            } else if (data.list && data.list.length > 0) {
-                // Display info from the first available forecast item
-                const firstItem = data.list[0];
-                widget.innerHTML = `
-                    <div class="weather-info">
-                        <div class="weather-temp">${Math.round(firstItem.main.temp)}°C</div>
-                        <div class="weather-details">
-                            <span class="weather-condition">${firstItem.weather[0].description}</span>
-                            <span class="weather-humidity">Humidity: ${firstItem.main.humidity}%</span>
-                            <img src="https://openweathermap.org/img/wn/${firstItem.weather[0].icon}.png" alt="${firstItem.weather[0].description}" style="width:30px; height: 30px; vertical-align: middle;">
-                        </div>
+    function showInPageNotification(title, message) {
+        if (!notificationElement) return;
+
+        notificationTitle.textContent = title;
+        notificationMessage.textContent = message;
+
+        // Clear any existing timeout to prevent premature hiding if shown again quickly
+        if (notificationTimeoutId) {
+            clearTimeout(notificationTimeoutId);
+        }
+
+        notificationElement.classList.add('visible');
+
+        // Automatically hide after 7 seconds (adjust as needed)
+        notificationTimeoutId = setTimeout(() => {
+            hideInPageNotification();
+        }, 7000); // 7 seconds
+    }
+
+    function hideInPageNotification() {
+        if (!notificationElement) return;
+        notificationElement.classList.remove('visible');
+        if (notificationTimeoutId) {
+            clearTimeout(notificationTimeoutId); // Clear timeout if hidden manually
+            notificationTimeoutId = null;
+        }
+    }
+
+    // Add listener to close button
+    if (notificationCloseBtn) {
+        notificationCloseBtn.addEventListener('click', hideInPageNotification);
+    }
+
+    // --- Weather Fetching and Checking ---
+    function generateWeatherSignature(data) {
+        if (data && data.list && data.list.length > 0) {
+            const firstItem = data.list[0];
+            // More robust: include date/time, condition ID, temp, humidity
+            return `${firstItem.dt}_${firstItem.weather[0].id}_${Math.round(firstItem.main.temp)}_${firstItem.main.humidity}`;
+        }
+        return null;
+    }
+
+    function updateWeatherWidget(data) {
+        if (!weatherWidget) return;
+
+        if (data.error) {
+            weatherWidget.innerHTML = `<p class="error-message">Error: ${data.error}</p>`;
+        } else if (data.list && data.list.length > 0) {
+            const firstItem = data.list[0];
+            weatherWidget.innerHTML = `
+                <div class="weather-info">
+                    <div class="weather-temp">${Math.round(firstItem.main.temp)}°C</div>
+                    <div class="weather-details">
+                        <span class="weather-condition">${firstItem.weather[0].description}</span>
+                        <span class="weather-humidity">Humidity: ${firstItem.main.humidity}%</span>
+                        <img src="https://openweathermap.org/img/wn/${firstItem.weather[0].icon}.png" alt="${firstItem.weather[0].description}" style="width:30px; height: 30px; vertical-align: middle;">
                     </div>
-                `;
+                </div>
+            `;
+        } else {
+             weatherWidget.innerHTML = `<p>No weather data available for the selected dates.</p>`;
+        }
+    }
+
+    function fetchAndCheckWeather(isInitialLoad = false) {
+        console.log("Fetching weather data...");
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Weather Data Received:", data);
+                updateWeatherWidget(data);
+
+                // --- Store latest valid data --- <<< Modified
+                if (data && data.list && data.list.length > 0 && !data.error) {
+                    latestValidWeatherData = data.list[0]; // Store the first forecast item
+                    console.log("Stored latestValidWeatherData:", latestValidWeatherData);
+                } else {
+                    // Decide if you want to clear it if the latest fetch fails
+                    // latestValidWeatherData = null;
+                    console.log("Did not store latestValidWeatherData (error or no data).");
+                }
+                // --- End storing data ---
+
+                if (data.error) {
+                    console.warn("Weather data contains an error, skipping notification check.");
+                    // Avoid setting signature to error if we already have valid data,
+                    // only update signature if it wasn't already an error or null
+                    if (lastKnownWeatherSignature === null || !lastKnownWeatherSignature.startsWith('error_')) {
+                         lastKnownWeatherSignature = `error_${Date.now()}`;
+                    }
+                    return;
+                }
+
+                const currentSignature = generateWeatherSignature(data);
+                console.log("Current Signature:", currentSignature);
+                console.log("Last Known Signature:", lastKnownWeatherSignature);
+
+
+                if (isInitialLoad) {
+                    console.log("Initial weather load. Storing signature.");
+                    lastKnownWeatherSignature = currentSignature;
+                } else if (currentSignature && lastKnownWeatherSignature !== currentSignature) {
+                    console.log("Weather data changed! Showing in-page notification.");
+                    // Extract relevant info for the notification message
+                    const firstItem = data.list[0]; // Should be same as latestValidWeatherData now
+                    const condition = firstItem.weather[0].description;
+                    const temp = Math.round(firstItem.main.temp);
+                    showInPageNotification(
+                        `Weather Update for ${city}`,
+                        `Forecast updated: Now ${condition}, ${temp}°C.`
+                    );
+                    lastKnownWeatherSignature = currentSignature; // Update the stored signature
+                } else if (!currentSignature && lastKnownWeatherSignature) {
+                     console.log("Weather data became unavailable. Storing null signature.");
+                     lastKnownWeatherSignature = null; // Reset signature if data becomes unavailable
+                } else if (currentSignature && (!lastKnownWeatherSignature || lastKnownWeatherSignature.startsWith('error_'))) {
+                    console.log("Weather data became available or recovered from error. Storing signature.");
+                    lastKnownWeatherSignature = currentSignature; // Store if it was previously null/error
+                }
+                 else {
+                    console.log("Weather data unchanged or still unavailable/error.");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching/processing weather:", error);
+                // Only update widget on error if it's the initial load or state changes drastically
+                if (weatherWidget) {
+                     if (isInitialLoad || (lastKnownWeatherSignature && !lastKnownWeatherSignature.startsWith('error'))) { // Prevent spamming error message
+                         weatherWidget.innerHTML = `<p class="error-message">Could not load weather data. ${error.message}</p>`;
+                         if (lastKnownWeatherSignature === null || !lastKnownWeatherSignature.startsWith('error_')) {
+                             lastKnownWeatherSignature = `error_${Date.now()}`; // Mark as error state
+                         }
+                     }
+                }
+                 // Also clear latestValidWeatherData on fetch error? Maybe not, keep last known good one for test button?
+                 // latestValidWeatherData = null; // Optional: Clear on fetch failure
+            });
+    }
+
+    // --- Initial Load & Interval Setup ---
+    fetchAndCheckWeather(true);
+    setInterval(fetchAndCheckWeather, checkInterval);
+
+    // --- Staff Test Button ---
+    const testButton = document.getElementById('test-notification-btn');
+    if (testButton) {
+        testButton.addEventListener('click', () => {
+            console.log("Test notification button clicked.");
+
+            // <<< Modified Test Button Logic
+            if (latestValidWeatherData) {
+                // Use the stored data from the last successful fetch
+                const condition = latestValidWeatherData.weather[0].description;
+                const temp = Math.round(latestValidWeatherData.main.temp);
+                const testCity = "{{ trip.destination|escapejs }}"; // Use context variable
+
+                console.log(`Using latestValidWeatherData for test: ${condition}, ${temp}°C`);
+                showInPageNotification(
+                    `Weather Update for ${testCity}`,
+                    `Forecast updated: Now ${condition}, ${temp}°C. (Test)` // Added (Test) for clarity
+                );
             } else {
-                 widget.innerHTML = `<p>No weather data available for the selected dates.</p>`;
+                // No valid weather data available to show
+                 console.log("No latestValidWeatherData available for test.");
+                showInPageNotification(
+                    'Test Notification Failed',
+                    'Could not display weather details. No valid data loaded yet or last fetch failed.'
+                );
             }
-        })
-        .catch(error => {
-            console.error("Error fetching weather for widget:", error);
-            const widget = document.getElementById('weather-widget');
-            widget.innerHTML = `<p class="error-message">Could not load weather data. ${error.message}</p>`;
+            // <<< End Modified Test Button Logic
         });
+    }
 });
 </script>
 
 <style>
+/* --- In-Page Notification Styles --- */
+.notification-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #333; /* Dark background */
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1050; /* Ensure it's above most elements */
+  display: flex;
+  align-items: flex-start; /* Align items to top for close button positioning */
+  max-width: 350px;
+  opacity: 0;
+  transform: translateY(20px); /* Start slightly below */
+  visibility: hidden; /* Use visibility for better transition handling */
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out, visibility 0.4s linear;
+}
+
+.notification-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.notification-content {
+  flex-grow: 1; /* Takes up available space */
+  margin-right: 15px; /* Space before close button */
+}
+
+.notification-content strong {
+    color: var(--color-primary); /* Use theme color for title */
+    font-size: 1.1em;
+}
+
+.notification-close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 5px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.notification-close-btn:hover {
+  opacity: 1;
+  color: white;
+}
+
+
+/* Add styles for the test button area if needed */
+.notification-test-area {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary { /* Add a secondary button style if you don't have one */
+    background: #6c757d; /* Example secondary color */
+    color: white;
+    border: none;
+    /* Inherit padding/etc from .btn */
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* --- Existing Styles Below (Keep Them) --- */
+
 /* Dashboard Container */
 .dashboard-wrapper {
   display: flex;
@@ -222,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
-  margin-top: 1rem;
+  margin-top: 1rem; /* Adjusted margin if needed */
 }
 
 /* Card Styles */
@@ -370,6 +610,13 @@ document.addEventListener('DOMContentLoaded', function() {
   .overview-grid {
     grid-template-columns: 1fr;
   }
+
+  .notification-toast { /* Adjust notification position on smaller screens */
+      bottom: 10px;
+      right: 10px;
+      max-width: calc(100% - 20px); /* Ensure it doesn't overflow */
+  }
+
 }
 
 @media (max-width: 480px) {
