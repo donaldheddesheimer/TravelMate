@@ -27,42 +27,72 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const apiUrl = `/api/weather/?lat={{ trip.latitude }}&lon={{ trip.longitude }}&date={{ trip.date_leaving|date:"Y-m-d" }}`;
-    console.log("Fetching from:", apiUrl);
+    // Get data needed for the API call
+    const city = "{{ trip.destination|escapejs }}"; // Use escapejs for safety
+    const startDate = "{{ trip.date_leaving|date:'Y-m-d' }}"; // Format YYYY-MM-DD
+    const endDate = "{{ trip.date_returning|date:'Y-m-d' }}";   // Format YYYY-MM-DD
+
+    // Construct the API URL using the parameters expected by get_weather_view
+    // Ensure this path matches your urls.py for the get_weather_view
+    const apiUrl = `/weather/api/weather/?city=${encodeURIComponent(city)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+
+    console.log("Fetching weather from:", apiUrl);
 
     fetch(apiUrl)
         .then(response => {
-            if (!response.ok) throw new Error('Failed to get weather data');
+            if (!response.ok) {
+                 // Try to get error message from JSON response body
+                return response.json().then(errData => {
+                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    // If response is not JSON or parsing fails, throw generic error
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
             return response.json();
         })
         .then(weatherData => {
-            console.log("Received data:", weatherData);
+            console.log("Received weather data:", weatherData);
             const weatherDiv = document.getElementById('weather-data');
 
             if (weatherData.error) {
                 throw new Error(weatherData.error);
             }
 
-            // Group by day
+            if (!weatherData.list || weatherData.list.length === 0) {
+                weatherDiv.innerHTML = `
+                    <div class="current-weather">
+                        <h2>${weatherData.city?.name || city}</h2>
+                        <p>No forecast data available for the selected dates.</p>
+                    </div>`;
+                return;
+            }
+
+            // Group by day (using UTC date string for grouping)
             const dailyForecast = {};
             weatherData.list.forEach(item => {
-                const date = new Date(item.dt * 1000).toLocaleDateString();
-                if (!dailyForecast[date]) {
-                    dailyForecast[date] = {
-                        date: new Date(item.dt * 1000).toLocaleDateString('en-US', {
+                const dateKey = new Date(item.dt * 1000).toISOString().split('T')[0]; // Group by YYYY-MM-DD (UTC)
+
+                if (!dailyForecast[dateKey]) {
+                    dailyForecast[dateKey] = {
+                        // Display date in local, more readable format
+                        displayDate: new Date(item.dt * 1000).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric'
                         }),
                         items: [],
-                        max: item.main.temp,
-                        min: item.main.temp,
-                        icon: item.weather[0].icon
+                        maxTemp: -Infinity, // Initialize for finding max
+                        minTemp: Infinity,  // Initialize for finding min
+                        icons: new Set(), // Use a Set to store unique icons for the day
+                        descriptions: new Set() // Use a Set for unique descriptions
                     };
                 }
-                dailyForecast[date].items.push(item);
-                dailyForecast[date].max = Math.max(dailyForecast[date].max, item.main.temp);
-                dailyForecast[date].min = Math.min(dailyForecast[date].min, item.main.temp);
+                dailyForecast[dateKey].items.push(item);
+                dailyForecast[dateKey].maxTemp = Math.max(dailyForecast[dateKey].maxTemp, item.main.temp_max);
+                dailyForecast[dateKey].minTemp = Math.min(dailyForecast[dateKey].minTemp, item.main.temp_min);
+                dailyForecast[dateKey].icons.add(item.weather[0].icon);
+                dailyForecast[dateKey].descriptions.add(item.weather[0].description);
             });
 
             // Display forecast
@@ -70,38 +100,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="current-weather">
                     <h2>${weatherData.city.name}</h2>
                     <p>Trip Duration: ${weatherData.trip_duration} days</p>
+                     <p>Forecast for ${Object.keys(dailyForecast).length} day(s)</p>
                 </div>
                 <div class="forecast-header">
                     <h3>Daily Forecast</h3>
                 </div>
                 <div class="daily-forecast">
-                    ${Object.values(dailyForecast).map(day => `
+                    ${Object.values(dailyForecast).map(day => {
+                        // Pick a representative icon (e.g., the first one)
+                        const representativeIcon = day.icons.values().next().value || '01d'; // Default if empty
+                        const representativeDesc = [...day.descriptions].join(', '); // Combine descriptions
+
+                        return `
                         <div class="forecast-day">
-                            <p class="forecast-date">${day.date}</p>
-                            <img src="https://openweathermap.org/img/wn/${day.icon}@2x.png">
+                            <p class="forecast-date">${day.displayDate}</p>
+                            <img src="https://openweathermap.org/img/wn/${representativeIcon}@2x.png" alt="${representativeDesc}">
                             <p class="forecast-temp">
-                                ${Math.round(day.max)}° / ${Math.round(day.min)}°
+                                ${Math.round(day.maxTemp)}°C / ${Math.round(day.minTemp)}°C
                             </p>
-                            <div class="hourly-forecast">
-                                ${day.items.slice(0, 4).map(item => `
-                                    <div class="hourly-item">
-                                        <p>${new Date(item.dt * 1000).toLocaleTimeString([], {hour: '2-digit'})}</p>
-                                        <p>${Math.round(item.main.temp)}°</p>
-                                        <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png">
-                                    </div>
-                                `).join('')}
-                            </div>
+                            <p class="forecast-desc">${representativeDesc}</p>
+                            <details class="hourly-details">
+                                <summary>Hourly</summary>
+                                <div class="hourly-forecast">
+                                    ${day.items.map(item => `
+                                        <div class="hourly-item">
+                                            <p>${new Date(item.dt * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}</p>
+                                            <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png" alt="${item.weather[0].description}">
+                                            <p>${Math.round(item.main.temp)}°C</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
                         </div>
-                    `).join('')}
+                    `}).join('')}
                 </div>
             `;
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error fetching or processing weather data:', error);
             document.getElementById('weather-data').innerHTML = `
                 <div class="weather-error">
-                    <p>Error loading weather data</p>
-                    <p>${error.message}</p>
+                    <h2>Error</h2>
+                    <p>Could not load weather data for ${city}.</p>
+                    <p><i>${error.message}</i></p>
+                    <p>Please check the city name and ensure the API service is available.</p>
                 </div>
             `;
         });
@@ -109,11 +151,12 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* Your existing CSS styles remain unchanged */
+/* General styles */
 .weather-wrapper {
     max-width: 1000px;
     margin: 2rem auto;
     padding: 0 1rem;
+    color: white; /* Default text color */
 }
 
 .weather-container {
@@ -135,6 +178,10 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-bottom: 0.5rem;
 }
 
+.weather-header p {
+    color: rgba(255, 255, 255, 0.8);
+}
+
 .back-link {
     display: inline-block;
     margin-top: 1rem;
@@ -144,106 +191,182 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .back-link:hover {
-    color: #ff5e41;
+    color: #ff5e41; /* Slightly different hover color */
 }
 
+/* Current Weather / Summary Box */
 .current-weather {
     background: rgba(255, 255, 255, 0.08);
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     border-radius: 12px;
     margin-bottom: 2rem;
+    border-left: 4px solid var(--color-primary);
 }
 
-.weather-main {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 1.5rem;
-}
-
-.weather-icon-temp {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.weather-icon-temp img {
-    width: 80px;
-    height: 80px;
-}
-
-.temperature {
-    font-size: 3rem;
-    font-weight: 700;
-}
-
-.weather-details {
-    flex: 1;
-}
-
-.weather-details h2 {
+.current-weather h2 {
     margin: 0 0 0.5rem 0;
     font-size: 1.8rem;
+    color: var(--color-primary);
 }
 
-.weather-condition {
-    text-transform: capitalize;
-    font-size: 1.2rem;
-    margin: 0 0 1rem 0;
-    color: rgba(255, 255, 255, 0.8);
+.current-weather p {
+    margin: 0.3rem 0;
+    color: rgba(255, 255, 255, 0.9);
 }
 
+/* Forecast Header */
 .forecast-header {
     margin: 2rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.forecast-header h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Daily Forecast Grid */
 .daily-forecast {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1rem;
+    gap: 1.5rem;
+    /* Adjust columns: more space, fewer columns on smaller screens */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
+/* Individual Forecast Day Card */
 .forecast-day {
     background: rgba(255, 255, 255, 0.05);
-    padding: 1rem;
+    padding: 1.2rem;
     border-radius: 8px;
     text-align: center;
+    transition: background 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.forecast-day:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .forecast-date {
     font-weight: 600;
     margin-bottom: 0.5rem;
+    font-size: 1rem;
 }
 
 .forecast-day img {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto;
+    width: 60px; /* Slightly larger icon */
+    height: 60px;
+    margin: 0.5rem auto;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 .forecast-temp {
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 500;
 }
 
+.forecast-desc {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: capitalize;
+    margin-bottom: 1rem;
+    min-height: 2.5em; /* Allow space for multiple descriptions */
+}
+
+/* Hourly Forecast Details */
+.hourly-details {
+    margin-top: auto; /* Push details/summary to the bottom */
+}
+
+.hourly-details summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--color-primary);
+    padding: 0.3rem 0;
+    border-radius: 4px;
+    transition: background 0.2s;
+    display: inline-block; /* Allow centering */
+}
+
+.hourly-details summary:hover {
+    text-decoration: underline;
+}
+
+.hourly-forecast {
+    display: flex;
+    gap: 1rem; /* Increased gap */
+    margin-top: 0.8rem;
+    overflow-x: auto; /* Enable horizontal scroll */
+    padding: 0.5rem 0.2rem 0.8rem 0.2rem; /* Add padding for scrollbar */
+    /* Custom scrollbar styles (optional) */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+/* Webkit scrollbar styles */
+.hourly-forecast::-webkit-scrollbar {
+  height: 6px;
+}
+.hourly-forecast::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hourly-forecast::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+
+.hourly-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 65px; /* Wider items */
+    font-size: 0.8rem;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.1); /* Slight background for items */
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.hourly-item p {
+    margin: 0.1rem 0;
+}
+
+.hourly-item img {
+    width: 35px; /* Slightly larger hourly icon */
+    height: 35px;
+    margin: 0.2rem auto;
+}
+
+/* Loading Spinner */
 .loading-spinner {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: 3rem;
+    min-height: 200px;
 }
 
 .spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.1);
+    border: 4px solid rgba(255, 255, 255, 0.2); /* Adjusted border */
     border-radius: 50%;
     border-top-color: var(--color-primary);
     animation: spin 1s ease-in-out infinite;
     margin-bottom: 1rem;
 }
 
+.loading-spinner p {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Error Message Styling */
 .weather-error {
     display: flex;
     flex-direction: column;
@@ -251,58 +374,59 @@ document.addEventListener('DOMContentLoaded', function() {
     justify-content: center;
     padding: 2rem;
     text-align: center;
-    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1); /* Light red background */
+    border: 1px solid rgba(255, 107, 107, 0.3); /* Light red border */
+    border-radius: 12px;
+    color: #ffcbcb; /* Lighter red text */
 }
 
-.weather-error svg {
+.weather-error h2 {
+    color: #ff6b6b; /* Stronger red for title */
     margin-bottom: 1rem;
 }
+.weather-error p {
+    margin: 0.3rem 0;
+}
+.weather-error i {
+    color: rgba(255, 204, 204, 0.8); /* Softer color for error message detail */
+}
+
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
+/* Responsive Adjustments */
 @media (max-width: 768px) {
-    .weather-main {
-        flex-direction: column;
-        text-align: center;
-    }
-
     .daily-forecast {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+    }
+    .weather-container {
+        padding: 1.5rem;
     }
 }
 
-.daily-forecast {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-}
-
-.forecast-day {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 1rem;
-    border-radius: 8px;
-}
-
-.hourly-forecast {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-}
-
-.hourly-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 50px;
-}
-
-.hourly-item img {
-    width: 30px;
-    height: 30px;
+@media (max-width: 480px) {
+    .daily-forecast {
+        /* Stack days vertically on very small screens */
+        grid-template-columns: 1fr;
+    }
+     .weather-header h1 {
+        font-size: 1.8rem;
+    }
+    .current-weather {
+        padding: 1rem 1.5rem;
+    }
+    .current-weather h2 {
+        font-size: 1.5rem;
+    }
+    .forecast-day {
+        padding: 1rem;
+    }
+    .hourly-item {
+        min-width: 60px;
+    }
 }
 </style>
 {% endblock %}

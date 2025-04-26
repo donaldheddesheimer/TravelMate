@@ -18,7 +18,6 @@
         <li><a href="{% url 'trips:dashboard' trip.id %}" class="{% if active_tab == 'overview' %}active{% endif %}">Overview</a></li>
         <li><a href="{% url 'weather:forecast' trip.id %}" class="{% if active_tab == 'weather' %}active{% endif %}">Weather</a></li>
         <li><a href="{% url 'packing:list' trip.id %}" class="{% if active_tab == 'packing' %}active{% endif %}">Packing List</a></li>
-        <!-- Temporarily comment out tips until implemented -->
         {# <li><a href="{% url 'tips:destination' trip.id %}" class="{% if active_tab == 'tips' %}active{% endif %}">Travel Tips</a></li> #}
         <li><a href="{% url 'chatbot:chat_view' trip.id %}" class="{% if active_tab == 'chatbot' %}active{% endif %}">Trip Assistant</a></li>
       </ul>
@@ -64,26 +63,54 @@
 <!-- Add JavaScript for weather widget -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Load basic weather info for the widget
-    fetch(`/weather/api/weather/?city={{ trip.destination }}`)
-        .then(response => response.json())
+    const city = "{{ trip.destination|escapejs }}"; // Use escapejs for safety in JS strings
+    const startDate = "{{ trip.date_leaving|date:'Y-m-d' }}"; // Format date as YYYY-MM-DD
+    const endDate = "{{ trip.date_returning|date:'Y-m-d' }}"; // Format date as YYYY-MM-DD
+
+    // Construct the URL for the AJAX request - ensure this path matches your urls.py
+    const apiUrl = `/weather/api/weather/?city=${encodeURIComponent(city)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+
+    console.log("Fetching weather for widget:", apiUrl);
+
+    fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                // Try to get error message from JSON response body
+                return response.json().then(errData => {
+                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    // If response is not JSON or parsing fails, throw generic error
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
-            if (!data.error) {
-                const widget = document.getElementById('weather-widget');
+            console.log("Widget Weather Data:", data);
+            const widget = document.getElementById('weather-widget');
+            if (data.error) {
+                 widget.innerHTML = `<p class="error-message">Error: ${data.error}</p>`;
+            } else if (data.list && data.list.length > 0) {
+                // Display info from the first available forecast item
+                const firstItem = data.list[0];
                 widget.innerHTML = `
                     <div class="weather-info">
-                        <div class="weather-temp">${Math.round(data.temp)}°F</div>
+                        <div class="weather-temp">${Math.round(firstItem.main.temp)}°C</div>
                         <div class="weather-details">
-                            <span class="weather-condition">${data.weather_description}</span>
-                            <span class="weather-humidity">Humidity: ${data.humidity}%</span>
+                            <span class="weather-condition">${firstItem.weather[0].description}</span>
+                            <span class="weather-humidity">Humidity: ${firstItem.main.humidity}%</span>
+                            <img src="https://openweathermap.org/img/wn/${firstItem.weather[0].icon}.png" alt="${firstItem.weather[0].description}" style="width:30px; height: 30px; vertical-align: middle;">
                         </div>
                     </div>
                 `;
+            } else {
+                 widget.innerHTML = `<p>No weather data available for the selected dates.</p>`;
             }
         })
         .catch(error => {
-            document.getElementById('weather-widget').innerHTML =
-                `<p class="error-message">Could not load weather data</p>`;
+            console.error("Error fetching weather for widget:", error);
+            const widget = document.getElementById('weather-widget');
+            widget.innerHTML = `<p class="error-message">Could not load weather data. ${error.message}</p>`;
         });
 });
 </script>
@@ -96,6 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   padding: 2rem;
+  color: white; /* Ensure default text color is white */
 }
 
 .dashboard-container {
@@ -258,6 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Weather Widget Styles */
 .widget-content {
   margin: 1rem 0;
+  color: white; /* Ensure text inside widget is white */
 }
 
 .weather-info {
@@ -287,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .error-message {
-  color: #ff6b6b;
+  color: #ff6b6b; /* Light red for errors */
   font-size: 0.9rem;
 }
 
@@ -303,6 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
   transition: all 0.3s ease;
   border: none;
   cursor: pointer;
+  margin-top: auto; /* Push button to bottom of card */
 }
 
 .btn-primary {
@@ -334,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   .dashboard-nav ul {
     flex-wrap: wrap;
+    justify-content: center; /* Center items when wrapped */
   }
 
   .overview-grid {

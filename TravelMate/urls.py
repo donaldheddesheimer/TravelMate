@@ -11,7 +11,7 @@ urlpatterns = [
     path('', include('home.urls', namespace='home')),
     path('api/', include('api.urls', namespace='api')),
     path('trips/<int:trip_id>/', include('chatbot.urls')),
-    path('api/', include("weather.urls")),
+    path('weather/', include("weather.urls")),
     path('packing/', include('packing.urls', namespace='packing')),
 ]
 

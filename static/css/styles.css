@@ -1217,3 +1217,605 @@ svg {
 .remove-activity-btn[style*="display: none"] {
     /* Could use opacity: 0; pointer-events: none; if needed for transitions */
 }
+
+/* ===================================================================== */
+/*                         Packing List Styles                           */
+/* ===================================================================== */
+
+/* Wrapper and Container (Similar to Dashboard/Forms) */
+.packing-wrapper {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 2rem;
+  color: white; /* Ensure default text color */
+}
+
+.packing-container {
+  width: 100%;
+  max-width: 900px; /* Slightly wider maybe */
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  position: relative; /* For potential pseudo-elements like forms */
+  overflow: hidden;
+}
+
+/* Optional animated background effect like forms */
+.packing-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,76,36,0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  z-index: -1;
+}
+
+
+/* Header (Similar to Dashboard Header) */
+.packing-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.packing-header h1 {
+  font-size: 2.2rem; /* Adjust size as needed */
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.packing-header p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1rem;
+}
+
+/* Back Link (Consistent style) */
+.back-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.back-link:hover {
+    color: #ff5e41; /* Slightly different hover color */
+}
+
+
+/* Action Buttons Area */
+.packing-actions {
+  display: flex;
+  justify-content: center; /* Or flex-start / flex-end */
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+/* Apply consistent button styling */
+/* Reuse .btn from dashboard or define here */
+.packing-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem; /* Space between icon and text */
+  padding: 0.8rem 1.8rem;
+  font-weight: 600;
+  border-radius: 8px; /* Consistent radius */
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem; /* Adjust size */
+}
+
+/* Primary Button Style (like Add Trip) */
+.packing-actions .btn-primary {
+  background: var(--color-primary);
+  color: var(--color-neutral-900); /* Or white if preferred */
+  box-shadow: 0 4px 15px rgba(255, 76, 36, 0.2);
+}
+
+.packing-actions .btn-primary:hover {
+  background: #ff5e41; /* Adjust hover color */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 76, 36, 0.3);
+}
+
+/* Secondary Button Style (Subtler) */
+.packing-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.packing-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Button Icons */
+.packing-actions .btn svg {
+  width: 18px; /* Adjust icon size */
+  height: 18px;
+}
+
+/* Spinner inside buttons */
+.packing-actions .btn .spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white; /* Or black for primary button */
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 0.5rem; /* Space if text follows */
+}
+.packing-actions .btn-primary .spinner {
+  border-top-color: var(--color-neutral-900); /* Match text color */
+}
+
+
+/* Packing List Content Area */
+#packingList {
+  margin-top: 2rem;
+}
+
+.category-section {
+  margin-bottom: 2.5rem;
+}
+
+.category-section h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+/* Optional accent line below category title */
+.category-section h3::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; /* Position over the border */
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--color-primary);
+}
+
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* Space between items */
+}
+
+/* Individual Packing Item */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+}
+
+.item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom Checkbox */
+.item-checkbox-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.item-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 22px;
+  width: 22px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.item-checkbox-wrapper:hover .checkmark {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.item-checkbox:checked ~ .checkmark {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 7px;
+  top: 3px;
+  width: 6px;
+  height: 12px;
+  border: solid var(--color-neutral-900); /* Checkmark color */
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.item-checkbox:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Item Details (Name, Quantity, etc.) */
+.item-details {
+  flex-grow: 1; /* Take available space */
+  display: flex;
+  flex-direction: column; /* Stack details vertically */
+  gap: 0.1rem; /* Small gap between details */
+  transition: opacity 0.3s ease;
+}
+
+.item-name {
+  font-weight: 500;
+  font-size: 1rem;
+  transition: text-decoration 0.3s ease;
+}
+
+.item-quantity, .item-day, .item-notes {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: inline-block; /* Or block if needed */
+  margin-right: 0.5rem; /* Space between inline details */
+}
+
+.item-notes {
+  font-style: italic;
+  margin-top: 0.2rem;
+  display: block; /* Make notes take full width */
+}
+
+/* Essential Item Indicator (optional) */
+.item.essential .item-name::before {
+  content: '★'; /* Or other indicator */
+  color: var(--color-primary);
+  margin-right: 0.5em;
+  font-size: 0.8em;
+}
+
+/* Completed Item Styling */
+.item.completed {
+  opacity: 0.6;
+}
+
+.item.completed .item-name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Item Action Buttons */
+.item-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  width: 32px; /* Fixed size */
+  height: 32px;
+  border-radius: 50%; /* Circular */
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-action.edit-item:hover {
+  background-color: rgba(76, 175, 80, 0.2); /* Greenish tint */
+  color: #a5d6a7;
+}
+
+.btn-action.delete-item:hover {
+  background-color: rgba(255, 80, 80, 0.2); /* Reddish tint */
+  color: #ff8a80;
+}
+
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  margin-top: 2rem;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+
+/* Modal Styling */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.7); /* Dark overlay */
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+  background: var(--color-neutral-800); /* Match form background */
+  color: var(--color-light);
+  margin: 10vh auto; /* Centered vertically */
+  padding: 2.5rem;
+  border-radius: 15px;
+  max-width: 500px; /* Modal width */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slideIn 0.4s ease-out;
+}
+
+.close-modal {
+  color: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  font-size: 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+  color: white;
+  text-decoration: none;
+}
+
+.modal-content h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 2rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* Modal Form Styles (Match main forms) */
+#addItemForm .form-group {
+  margin-bottom: 1.5rem;
+}
+
+#addItemForm label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+#addItemForm input[type="text"],
+#addItemForm input[type="number"],
+#addItemForm select,
+#addItemForm textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+#addItemForm input:focus,
+#addItemForm select:focus,
+#addItemForm textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px rgba(255, 76, 36, 0.2);
+}
+
+#addItemForm select {
+  appearance: none; /* Custom dropdown arrow needed */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='rgba(255,255,255,0.7)' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+  padding-right: 2.5rem; /* Space for arrow */
+}
+
+#addItemForm textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+#addItemForm .form-group label input[type="checkbox"] {
+   /* Use system default or style similarly to item checkbox */
+   margin-right: 0.5em;
+   vertical-align: middle;
+}
+
+
+/* Modal Submit Button */
+#addItemForm button[type="submit"] {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--color-primary);
+  color: var(--color-neutral-900);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+#addItemForm button[type="submit"]:hover {
+  background: #ff5e41;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 76, 36, 0.3);
+}
+
+#addItemForm button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Alert Styling (Basic - adapt as needed) */
+.alert {
+    position: fixed;
+    top: 80px; /* Below navbar */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+    font-size: 0.95rem;
+    min-width: 250px;
+    text-align: center;
+    animation: fadeIn 0.3s ease-out;
+}
+.alert-error {
+    background-color: #e53e3e; /* Red */
+    color: white;
+}
+.alert-success {
+    background-color: #38a169; /* Green */
+    color: white;
+}
+.alert-info {
+    background-color: #3182ce; /* Blue */
+    color: white;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .packing-container {
+    padding: 2rem;
+  }
+  .packing-header h1 {
+    font-size: 1.8rem;
+  }
+  .category-section h3 {
+      font-size: 1.3rem;
+  }
+  .item {
+    padding: 0.8rem 1rem;
+    gap: 0.8rem;
+  }
+  .item-name {
+    font-size: 0.95rem;
+  }
+  .btn-action {
+      width: 30px;
+      height: 30px;
+  }
+  .btn-action svg {
+      width: 14px;
+      height: 14px;
+  }
+   .modal-content {
+    max-width: 90%;
+    padding: 2rem;
+    margin: 5vh auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .packing-container {
+    padding: 1.5rem;
+    border-radius: 15px;
+  }
+   .packing-actions {
+       gap: 1rem;
+   }
+   .packing-actions .btn {
+       width: 100%; /* Stack buttons */
+       padding: 0.7rem 1.5rem;
+       font-size: 0.9rem;
+   }
+  .category-section {
+      margin-bottom: 2rem;
+  }
+  .category-section h3 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+  }
+  .item {
+    /* Maybe stack checkbox above details */
+    /* flex-direction: column; */
+    /* align-items: flex-start; */
+  }
+   .item-actions {
+       gap: 0.5rem;
+   }
+}
