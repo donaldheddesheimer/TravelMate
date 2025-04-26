@@ -122,6 +122,62 @@
         </form>
       </div>
     </div>
+
+    <!-- Edit Item Modal (Hidden by default) -->
+    <div id="editItemModal" class="modal">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Edit Item</h3>
+        <form id="editItemForm">
+          <div class="form-group">
+            <label for="editItemName">Item Name</label>
+            <input type="text" id="editItemName" required>
+          </div>
+          <div class="form-group">
+            <label for="editItemCategory">Category</label>
+            <select id="editItemCategory" required>
+              {% for value, label in category_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editItemQuantity">Quantity</label>
+            <input type="number" id="editItemQuantity" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="editItemNotes">Notes</label>
+            <textarea id="editItemNotes" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="editItemEssential">
+              Essential Item
+            </label>
+          </div>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add this modal after the addItemModal -->
+    <div id="loadingModal" class="modal">
+      <div class="modal-content loading-content">
+        <h3>Generating Your Packing List</h3>
+        <p>We're creating a personalized packing list based on your trip details...</p>
+        <div class="loading-bar-container">
+          <div class="loading-bar">
+            <div class="loading-progress"></div>
+          </div>
+          <div class="loading-steps">
+            <span class="step active">Analyzing trip details</span>
+            <span class="step">Checking weather</span>
+            <span class="step">Generating items</span>
+            <span class="step">Finalizing list</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -152,14 +208,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Generate Packing List
+    // Update the generate button click handler
     document.getElementById('generatePackingList').addEventListener('click', async function() {
         const btn = this;
+        const hasExistingList = document.querySelectorAll('.item').length > 0;
+        
+        if (hasExistingList) {
+            if (!confirm('This will replace your current packing list. Are you sure you want to regenerate?')) {
+                return;
+            }
+        }
+
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Generating...';
+        showLoadingModal();
+        console.log('Starting packing list generation...');
 
         try {
-            await handleApiCall(`/packing/{{ trip.id }}/generate/`, {
+            // Start the API call
+            console.log('Making API request to generate packing list...');
+            const response = await handleApiCall(`/packing/{{ trip.id }}/generate/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
@@ -167,69 +234,116 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json'
                 }
             });
-            window.location.reload();
+
+            console.log('API Response:', response);
+            if (response.status === 'success') {
+                console.log('Successfully generated packing list');
+                // Keep the loading animation going until the page reloads
+                setTimeout(() => {
+                    console.log('Reloading page to show new packing list...');
+                    window.location.reload();
+                }, 1000);
+            } else {
+                throw new Error(response.message || 'Failed to generate packing list');
+            }
         } catch (error) {
+            console.error('Error generating packing list:', error);
             showAlert(error.message, 'error');
+            document.getElementById('loadingModal').style.display = 'none';
+            btn.disabled = false;
 
             // If it's a redirect to login, redirect properly
             if (error.message.includes('login') || error.message.includes('Login')) {
                 window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
             }
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-                    <path d="M16 16h5v5"></path>
-                </svg>
-                Generate Packing List
-            `;
         }
     });
 
-    // Add custom item modal
-    const modal = document.getElementById('addItemModal');
+    // Modal handling
+    const addModal = document.getElementById('addItemModal');
+    const editModal = document.getElementById('editItemModal');
     const addBtn = document.getElementById('addCustomItem');
-    const closeBtn = document.querySelector('.close-modal');
+    const closeBtns = document.querySelectorAll('.close-modal');
+
+    function showModal(modal) {
+        modal.style.display = 'block';
+    }
+
+    function hideModal(modal) {
+        modal.style.display = 'none';
+        modal.querySelector('form').reset();
+    }
 
     addBtn.addEventListener('click', () => {
-        modal.style.display = 'block';
+        showModal(addModal);
         document.getElementById('itemName').focus();
     });
 
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-        document.getElementById('addItemForm').reset();
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            hideModal(addModal);
+            hideModal(editModal);
+        });
     });
 
     window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-            document.getElementById('addItemForm').reset();
+        if (event.target === addModal) {
+            hideModal(addModal);
+        }
+        if (event.target === editModal) {
+            hideModal(editModal);
         }
     });
 
-    // Handle form submission
-    document.getElementById('addItemForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    // Edit Item functionality
+    document.querySelectorAll('.edit-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const item = this.closest('.item');
+            const itemId = item.dataset.id;
+            
+            // Get current item details
+            const name = item.querySelector('.item-name').textContent;
+            const quantity = parseInt(item.querySelector('.item-quantity').textContent.replace('x', ''));
+            const category = item.closest('.category-section').querySelector('h3').textContent;
+            const notes = item.querySelector('.item-notes')?.textContent || '';
+            const isEssential = item.classList.contains('essential');
+            
+            // Populate edit form
+            document.getElementById('editItemName').value = name;
+            document.getElementById('editItemQuantity').value = quantity;
+            document.getElementById('editItemCategory').value = category.toUpperCase().replace(' ', '_');
+            document.getElementById('editItemNotes').value = notes;
+            document.getElementById('editItemEssential').checked = isEssential;
+            
+            // Store item ID in form
+            document.getElementById('editItemForm').dataset.itemId = itemId;
+            
+            // Show edit modal
+            showModal(editModal);
+            document.getElementById('editItemName').focus();
+        });
+    });
 
+    // Handle edit form submission
+    document.getElementById('editItemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
         const form = this;
+        const itemId = form.dataset.itemId;
         const submitBtn = form.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Adding...';
+        submitBtn.textContent = 'Saving...';
 
         const formData = {
-            name: document.getElementById('itemName').value.trim(),
-            category: document.getElementById('itemCategory').value,
-            quantity: parseInt(document.getElementById('itemQuantity').value) || 1,
-            is_essential: document.getElementById('itemEssential').checked,
-            notes: document.getElementById('itemNotes').value.trim()
+            name: document.getElementById('editItemName').value.trim(),
+            category: document.getElementById('editItemCategory').value,
+            quantity: parseInt(document.getElementById('editItemQuantity').value) || 1,
+            is_essential: document.getElementById('editItemEssential').checked,
+            notes: document.getElementById('editItemNotes').value.trim()
         };
 
         try {
-            const data = await handleApiCall(`/packing/{{ trip.id }}/add/`, {
+            const data = await handleApiCall(`/packing/item/${itemId}/edit/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
@@ -238,14 +352,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(formData)
             });
 
-            modal.style.display = 'none';
-            form.reset();
+            hideModal(editModal);
             window.location.reload();
         } catch (error) {
             showAlert(error.message, 'error');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Add Item';
+            submitBtn.textContent = 'Save Changes';
         }
     });
 
@@ -269,34 +382,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Toggle Item Completion
+    // Toggle item completion
     document.querySelectorAll('.item-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', async function() {
+        checkbox.addEventListener('change', function() {
             const itemId = this.closest('.item').dataset.id;
-            const isChecked = this.checked;
-
-            try {
-                const data = await handleApiCall(`/packing/item/${itemId}/toggle/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
+            const url = `/packing/item/${itemId}/toggle/`;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const item = this.closest('.item');
+                    if (data.completed) {
+                        item.classList.add('completed');
+                    } else {
+                        item.classList.remove('completed');
                     }
-                });
-
-                this.closest('.item').classList.toggle('completed', data.completed);
-            } catch (error) {
-                showAlert(error.message, 'error');
-                this.checked = !this.checked; // Revert checkbox state
-            }
-        });
-    });
-
-    // Edit Item (placeholder for future implementation)
-    document.querySelectorAll('.edit-item').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = this.closest('.item').dataset.id;
-            showAlert('Edit functionality coming soon!', 'info');
+                }
+            })
+            .catch(error => console.error('Error:', error));
         });
     });
 
@@ -310,6 +420,46 @@ document.addEventListener('DOMContentLoaded', function() {
             alert.remove();
         }, 5000);
     }
+
+    // Add these functions after the showAlert function
+    function showLoadingModal() {
+        const modal = document.getElementById('loadingModal');
+        modal.style.display = 'block';
+        
+        const progressBar = modal.querySelector('.loading-progress');
+        const steps = modal.querySelectorAll('.step');
+        let currentStep = 0;
+        
+        // Reset progress
+        progressBar.style.width = '0%';
+        steps.forEach(step => step.classList.remove('active'));
+        steps[0].classList.add('active');
+        
+        // Simulate progress
+        const totalTime = 38000; // 38 seconds
+        const interval = 100; // Update every 100ms
+        const totalSteps = steps.length;
+        const stepTime = totalTime / totalSteps;
+        
+        let progress = 0;
+        const timer = setInterval(() => {
+            progress += (interval / totalTime) * 100;
+            if (progress >= 100) {
+                clearInterval(timer);
+                // Don't hide the modal here - it will be hidden after the page reloads
+            } else {
+                progressBar.style.width = `${progress}%`;
+                
+                // Update active step
+                const newStep = Math.floor(progress / (100 / totalSteps));
+                if (newStep !== currentStep) {
+                    steps[currentStep].classList.remove('active');
+                    currentStep = newStep;
+                    steps[currentStep].classList.add('active');
+                }
+            }
+        }, interval);
+    }
 });
 </script>
 
@@ -321,10 +471,12 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .packing-container {
-    background: white;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
     padding: 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .packing-header {
@@ -335,22 +487,80 @@ document.addEventListener('DOMContentLoaded', function() {
 .packing-header h1 {
     font-size: 2.2rem;
     margin-bottom: 0.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.packing-header p {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.back-link:hover {
+    color: #ff5e41;
 }
 
 .packing-actions {
     display: flex;
     gap: 1rem;
     margin-bottom: 2rem;
+    justify-content: center;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background: #ff5e41;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
 }
 
 .category-section {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1.5rem;
+    border-radius: 12px;
     margin-bottom: 2rem;
 }
 
 .category-section h3 {
-    border-bottom: 1px solid #eee;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
 }
 
 .item-list {
@@ -361,14 +571,21 @@ document.addEventListener('DOMContentLoaded', function() {
 .item {
     display: flex;
     align-items: center;
-    padding: 0.75rem 1rem;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
-    background: #f9f9f9;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .item.essential {
-    background: #fff8e1;
+    background: rgba(255, 76, 36, 0.1);
+    border-left: 4px solid var(--color-primary);
 }
 
 .item.completed {
@@ -389,15 +606,16 @@ document.addEventListener('DOMContentLoaded', function() {
     display: inline-block;
     width: 20px;
     height: 20px;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
     position: relative;
+    transition: all 0.3s ease;
 }
 
 .item-checkbox:checked ~ .checkmark {
-    background: #4CAF50;
-    border-color: #4CAF50;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
 }
 
 .item-checkbox:checked ~ .checkmark:after {
@@ -418,11 +636,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .item-name {
     font-weight: 500;
+    color: white;
 }
 
 .item-quantity, .item-day, .item-notes {
     font-size: 0.85rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
     margin-left: 0.5rem;
 }
 
@@ -435,18 +654,19 @@ document.addEventListener('DOMContentLoaded', function() {
     background: none;
     border: none;
     cursor: pointer;
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
     padding: 0.25rem;
+    transition: color 0.3s ease;
 }
 
 .btn-action:hover {
-    color: #333;
+    color: white;
 }
 
 .empty-state {
     text-align: center;
     padding: 2rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .modal {
@@ -457,17 +677,21 @@ document.addEventListener('DOMContentLoaded', function() {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.4);
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
 }
 
 .modal-content {
-    background-color: white;
+    background: rgba(19, 19, 19, 0.95);
+    backdrop-filter: blur(10px);
     margin: 10% auto;
     padding: 2rem;
-    border-radius: 8px;
+    border-radius: 20px;
     width: 90%;
     max-width: 500px;
     position: relative;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .close-modal {
@@ -476,24 +700,43 @@ document.addEventListener('DOMContentLoaded', function() {
     top: 1rem;
     font-size: 1.5rem;
     cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+    color: white;
 }
 
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .form-group label {
     display: block;
     margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(255, 76, 36, 0.2);
 }
 
 .alert {
@@ -501,24 +744,29 @@ document.addEventListener('DOMContentLoaded', function() {
     top: 1rem;
     right: 1rem;
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 8px;
     color: white;
     z-index: 1000;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .alert-error {
-    background-color: #f44336;
+    background: rgba(255, 76, 36, 0.2);
+    border-color: var(--color-primary);
 }
 
 .alert-info {
-    background-color: #2196F3;
+    background: rgba(33, 150, 243, 0.2);
+    border-color: #2196F3;
 }
 
 .spinner {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border-top-color: white;
     animation: spin 1s ease-in-out infinite;
@@ -526,6 +774,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .packing-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+.loading-content {
+    text-align: center;
+    max-width: 500px;
+}
+
+.loading-content h3 {
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+}
+
+.loading-content p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2rem;
+}
+
+.loading-bar-container {
+    margin: 2rem 0;
+}
+
+.loading-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.loading-progress {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    border-radius: 4px;
+    transition: width 0.1s linear;
+}
+
+.loading-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+}
+
+.loading-steps .step {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.3s ease;
+}
+
+.loading-steps .step.active {
+    color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+    .loading-steps {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
 }
 </style>
 {% endblock %}

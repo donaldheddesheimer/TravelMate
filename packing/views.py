@@ -165,3 +165,40 @@ def toggle_item_completion(request, item_id):
         'status': 'success',
         'completed': item.completed
     })
+
+
+@login_required
+@require_POST
+def edit_packing_item(request, item_id):
+    try:
+        item = PackingItem.objects.get(id=item_id)
+        if item.packing_list.trip.user != request.user:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+            
+        payload = json.loads(request.body)
+        
+        # Update the item
+        item.name = payload.get('name', item.name).strip()
+        item.category = payload.get('category', item.category)
+        item.quantity = max(1, int(payload.get('quantity', item.quantity)))
+        item.is_essential = bool(payload.get('is_essential', item.is_essential))
+        item.notes = payload.get('notes', item.notes)
+        item.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'item': {
+                'id': item.id,
+                'name': item.name,
+                'category': item.get_category_display(),
+                'quantity': item.quantity,
+                'is_essential': item.is_essential,
+                'notes': item.notes,
+                'for_day': item.for_day.isoformat() if item.for_day else None
+            }
+        })
+
+    except PackingItem.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Item not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

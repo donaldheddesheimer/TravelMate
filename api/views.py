@@ -9,12 +9,16 @@ from .services.ai import DeepSeekService
 from django.views.decorators.cache import cache_page
 from api.services.packing import PackingListGenerator
 from trips.models import Trip
+from packing.models import PackingList, PackingItem
 import json
 from django.conf import settings
 from datetime import datetime, timedelta
 import logging
 from functools import partial
+from django.core.cache import cache
+from django.http import JsonResponse
 
+logger = logging.getLogger(__name__)
 
 # @api_view(['GET'])
 # @cache_page(60 * 15)
@@ -132,15 +136,85 @@ def chatbot(request):
     return Response({'reply': reply})
 
 
-@api_view(['POST'])
+@cache_page(60 * 60)  # Cache for 1 hour
 def generate_packing_list(request, trip_id):
-    trip = Trip.objects.get(pk=trip_id)
+    logger.info(f"Received packing list generation request for trip_id: {trip_id}")
     try:
-        ai_response = PackingListGenerator.generate_packing_list(trip)
-        packing_data = json.loads(ai_response)
-        return Response(packing_data)
+        trip = Trip.objects.get(id=trip_id)
+        logger.info(f"Found trip: {trip.destination} (ID: {trip_id})")
+        
+        # Check if we should regenerate
+        regenerate = request.GET.get('regenerate', 'false').lower() == 'true'
+        logger.info(f"Regenerate flag: {regenerate}")
+        
+        if regenerate:
+            # Clear existing cache
+            cache.delete(f'packing_list_{trip_id}')
+            logger.info("Cleared existing cache")
+            # Delete existing non-custom items
+            deleted_count = PackingItem.objects.filter(packing_list__trip=trip, custom_added=False).delete()[0]
+            logger.info(f"Deleted {deleted_count} existing non-custom items")
+        
+        # Get or create packing list
+        packing_list, created = PackingList.objects.get_or_create(trip=trip)
+        logger.info(f"{'Created new' if created else 'Found existing'} packing list for trip")
+        
+        # Generate new packing list using AI
+        logger.info("Calling PackingListGenerator to generate new list")
+        response = PackingListGenerator.generate_packing_list(trip)
+        
+        if not response:
+            logger.error("Failed to get response from PackingListGenerator")
+            return JsonResponse({'error': 'Failed to generate packing list'}, status=500)
+            
+        try:
+            logger.info("Attempting to parse AI response")
+            data = json.loads(response)
+            if not isinstance(data, dict) or 'categories' not in data:
+                logger.error(f"Invalid response format: {data}")
+                return JsonResponse({'error': 'Invalid response format from AI service'}, status=500)
+                
+            # Create packing items from the response
+            logger.info("Creating packing items from response")
+            total_items = 0
+            for category in data['categories']:
+                category_name = category.get('name', 'Uncategorized')
+                logger.info(f"Processing category: {category_name}")
+                items_in_category = 0
+                for item in category.get('items', []):
+                    PackingItem.objects.create(
+                        packing_list=packing_list,
+                        name=item.get('name', ''),
+                        category=category_name,
+                        quantity=item.get('quantity', 1),
+                        is_essential=item.get('essential', False),
+                        notes=item.get('notes', ''),
+                        for_day=item.get('for_day'),
+                        custom_added=False
+                    )
+                    items_in_category += 1
+                    total_items += 1
+                    logger.info(f"Created item: {item.get('name', '')}")
+                logger.info(f"Created {items_in_category} items in category {category_name}")
+                    
+            logger.info(f"Successfully generated packing list with {total_items} total items")
+            return JsonResponse({
+                'success': True,
+                'message': 'Packing list generated successfully',
+                'items_created': total_items
+            })
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {str(e)}")
+            logger.error(f"Raw response: {response}")
+            return JsonResponse({'error': 'Invalid JSON response from AI service'}, status=500)
+            
+    except Trip.DoesNotExist:
+        logger.error(f"Trip not found with ID: {trip_id}")
+        return JsonResponse({'error': 'Trip not found'}, status=404)
     except Exception as e:
-        return Response({'error': str(e)}, status=400)
+        logger.error(f"Unexpected error in generate_packing_list: {str(e)}", exc_info=True)
+        return JsonResponse({'error': 'Internal server error'}, status=500)
 
 
 def get_cache_key(request, *args, **kwargs):
@@ -156,12 +230,6 @@ def weather_forecast(request):
     """
     Get weather forecast using AI service
     """
-    logger = logging.getLogger(__name__)
-    
-    destination = request.GET.get('destination')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-
     logger.info(f"Received weather forecast request for {destination} from {start_date} to {end_date}")
     logger.info(f"Cache key: weather_forecast_{destination}_{start_date}_{end_date}")
 
