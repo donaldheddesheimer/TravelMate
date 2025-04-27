@@ -1756,6 +1756,20 @@ svg {
     background-color: #3182ce; /* Blue */
     color: white;
 }
+.tip-item {
+  /* Inherits .item styles. Add specific overrides here if needed. */
+}
+
+.tip-content {
+   /* Inherits .item-details styles. */
+}
+
+.tip-text {
+  margin: 0; /* Remove default paragraph margins */
+  line-height: 1.5; /* Adjust line height for readability */
+  color: rgba(255, 255, 255, 0.9); /* Slightly brighter text */
+}
+
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {

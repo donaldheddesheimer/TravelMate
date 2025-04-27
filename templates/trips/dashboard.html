@@ -18,7 +18,7 @@
         <li><a href="{% url 'trips:dashboard' trip.id %}" class="{% if active_tab == 'overview' %}active{% endif %}">Overview</a></li>
         <li><a href="{% url 'weather:forecast' trip.id %}" class="{% if active_tab == 'weather' %}active{% endif %}">Weather</a></li>
         <li><a href="{% url 'packing:list' trip.id %}" class="{% if active_tab == 'packing' %}active{% endif %}">Packing List</a></li>
-        {# <li><a href="{% url 'tips:destination' trip.id %}" class="{% if active_tab == 'tips' %}active{% endif %}">Travel Tips</a></li> #}
+        <li><a href="{% url 'tips:list' trip.id %}" class="{% if active_tab == 'tips' %}active{% endif %}">Travel Tips</a></li>
         <li><a href="{% url 'chatbot:chat_view' trip.id %}" class="{% if active_tab == 'chatbot' %}active{% endif %}">Trip Assistant</a></li>
       </ul>
     </nav>

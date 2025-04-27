@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Travel Tips for {{ trip.destination }} - TravelMate{% endblock %}
+
+{% block content %}
+{# Use existing wrapper/container styles or create new ones #}
+<div class="packing-wrapper"> {# Reuse packing wrapper style #}
+  <div class="packing-container"> {# Reuse packing container style #}
+
+    <!-- Tips Header -->
+    <div class="packing-header"> {# Reuse packing header style #}
+      <h1>Travel Tips for {{ trip.destination }}</h1>
+      <p>{{ trip.date_leaving|date:"M d, Y" }} to {{ trip.date_returning|date:"M d, Y" }}</p>
+      <a href="{% url 'trips:dashboard' trip.id %}" class="back-link">
+        ← Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Tips Actions -->
+    <div class="packing-actions"> {# Reuse packing actions style #}
+      <button id="generateTravelTips" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+          <path d="M16 16h5v5"></path>
+        </svg>
+        Generate Travel Tips
+      </button>
+      {# Removed "Add Custom Item" button #}
+    </div>
+
+    <!-- Tips Content -->
+    <div id="tipsList"> {# Changed ID slightly for clarity #}
+      {% if tips_by_category %}
+        {% for category, items in tips_by_category.items %}
+          <div class="category-section"> {# Reuse category section style #}
+            <h3>{{ category }}</h3>
+            <ul class="item-list"> {# Reuse item list style #}
+              {% for item in items %}
+                {# Simplified list item - no checkbox, actions, etc. #}
+                <li class="item tip-item" data-id="{{ item.id }}"> {# Reuse item style, add 'tip-item' class if needed #}
+                  {# Removed checkbox wrapper #}
+                  <div class="item-details tip-content"> {# Reuse item-details, add class #}
+                    <p class="tip-text">{{ item.content }}</p> {# Display the tip content directly #}
+                    {# Removed quantity, day, notes spans #}
+                  </div>
+                  {# Removed item actions (edit/delete buttons) #}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state"> {# Reuse empty state style #}
+          <p>No travel tips generated yet. Click "Generate Travel Tips" to get advice.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Removed Add Item Modal #}
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Helper function for API calls (keep as is)
+    async function handleApiCall(url, options) {
+        try {
+            const response = await fetch(url, options);
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Unexpected response: ${text.substring(0, 100)}...`);
+            }
+            const data = await response.json();
+            if (!response.ok) {
+                // Try to get a more specific error message from the JSON response
+                throw new Error(data.message || `Request failed with status ${response.status}`);
+            }
+            return data;
+        } catch (error) {
+            console.error('API call failed:', error);
+            // If the error object itself has a message, use it, otherwise use the generic string version
+            throw new Error(error.message || String(error));
+        }
+    }
+
+
+    // Generate Travel Tips
+    const generateBtn = document.getElementById('generateTravelTips');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', async function() {
+            const btn = this;
+            const originalHtml = btn.innerHTML; // Store original HTML
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+
+            try {
+                // Update URL to the new tips generation endpoint
+                await handleApiCall(`/tips/${'{{ trip.id }}'}/generate/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                // Reload the page to show the new tips
+                window.location.reload();
+            } catch (error) {
+                showAlert(error.message || 'Failed to generate tips.', 'error');
+                // Optional: Redirect to login if error suggests authentication issue
+                if (error.message && (error.message.includes('login') || error.message.includes('Login') || error.message.includes('403'))) {
+                    window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+                }
+            } finally {
+                // Restore button state only if generation failed (since success reloads page)
+                if (!btn.disabled) { // Check if button is still disabled (means reload didn't happen)
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            }
+        });
+    }
+
+    // Removed: Add custom item modal logic
+    // Removed: Add custom item form submission logic
+    // Removed: Delete Item logic
+    // Removed: Toggle Item Completion logic
+    // Removed: Edit Item logic
+
+    // Keep showAlert function (useful for errors)
+    function showAlert(message, type) {
+        // Remove existing alerts first
+        document.querySelectorAll('.alert').forEach(a => a.remove());
+
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`; // Ensure you have .alert styles in css
+        alert.textContent = message;
+        document.body.appendChild(alert);
+
+        // Automatically remove after 5 seconds
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

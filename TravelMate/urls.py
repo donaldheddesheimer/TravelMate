@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/', include('api.urls', namespace='api')),
     path('trips/<int:trip_id>/', include('chatbot.urls')),
     path('weather/', include("weather.urls")),
+    path('tips/', include('tips.urls')),
     path('packing/', include('packing.urls', namespace='packing')),
 ]
 

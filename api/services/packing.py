@@ -56,7 +56,7 @@ class PackingListGenerator:
         # Using the model from your example, but you might want GPT-3.5/4
         # model_name = "microsoft/mai-ds-r1:free"
         # Or stick with gpt-3.5-turbo if preferred and available on OpenRouter
-        model_name = getattr(settings, 'OPENROUTER_CHAT_MODEL', "gpt-3.5-turbo") # Default to gpt-3.5-turbo if not set
+        model_name = "deepseek/deepseek-chat-v3-0324:free" # Default to gpt-3.5-turbo if not set
 
         prompt = f"""Create a detailed packing list in JSON format for a trip to {trip.destination} from {trip.date_leaving.strftime('%Y-%m-%d')} to {trip.date_returning.strftime('%Y-%m-%d')}.
 
