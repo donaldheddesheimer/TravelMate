@@ -4,12 +4,10 @@
 {% block title %}Travel Tips for {{ trip.destination }} - TravelMate{% endblock %}
 
 {% block content %}
-{# Use existing wrapper/container styles or create new ones #}
-<div class="packing-wrapper"> {# Reuse packing wrapper style #}
-  <div class="packing-container"> {# Reuse packing container style #}
-
+<div class="packing-wrapper">
+  <div class="packing-container">
     <!-- Tips Header -->
-    <div class="packing-header"> {# Reuse packing header style #}
+    <div class="packing-header">
       <h1>Travel Tips for {{ trip.destination }}</h1>
       <p>{{ trip.date_leaving|date:"M d, Y" }} to {{ trip.date_returning|date:"M d, Y" }}</p>
       <a href="{% url 'trips:dashboard' trip.id %}" class="back-link">
@@ -18,7 +16,7 @@
     </div>
 
     <!-- Tips Actions -->
-    <div class="packing-actions"> {# Reuse packing actions style #}
+    <div class="packing-actions">
       <button id="generateTravelTips" class="btn btn-primary">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
@@ -28,45 +26,56 @@
         </svg>
         Generate Travel Tips
       </button>
-      {# Removed "Add Custom Item" button #}
     </div>
 
     <!-- Tips Content -->
-    <div id="tipsList"> {# Changed ID slightly for clarity #}
+    <div id="tipsList">
       {% if tips_by_category %}
         {% for category, items in tips_by_category.items %}
-          <div class="category-section"> {# Reuse category section style #}
+          <div class="category-section">
             <h3>{{ category }}</h3>
-            <ul class="item-list"> {# Reuse item list style #}
+            <ul class="item-list">
               {% for item in items %}
-                {# Simplified list item - no checkbox, actions, etc. #}
-                <li class="item tip-item" data-id="{{ item.id }}"> {# Reuse item style, add 'tip-item' class if needed #}
-                  {# Removed checkbox wrapper #}
-                  <div class="item-details tip-content"> {# Reuse item-details, add class #}
-                    <p class="tip-text">{{ item.content }}</p> {# Display the tip content directly #}
-                    {# Removed quantity, day, notes spans #}
+                <li class="item tip-item" data-id="{{ item.id }}">
+                  <div class="item-details tip-content">
+                    <p class="tip-text">{{ item.content }}</p>
                   </div>
-                  {# Removed item actions (edit/delete buttons) #}
                 </li>
               {% endfor %}
             </ul>
           </div>
         {% endfor %}
       {% else %}
-        <div class="empty-state"> {# Reuse empty state style #}
+        <div class="empty-state">
           <p>No travel tips generated yet. Click "Generate Travel Tips" to get advice.</p>
         </div>
       {% endif %}
     </div>
 
-    {# Removed Add Item Modal #}
-
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+      <div class="modal-content loading-content">
+        <h3>Generating Travel Tips</h3>
+        <p>Please wait while we analyze your trip details...</p>
+        <div class="loading-bar-container">
+          <div class="loading-bar">
+            <div class="loading-progress"></div>
+          </div>
+          <div class="loading-steps">
+            <span class="step active">Analyzing destination</span>
+            <span class="step">Researching local customs</span>
+            <span class="step">Generating cultural tips</span>
+            <span class="step">Finalizing recommendations</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Helper function for API calls (keep as is)
+    // Helper function for API calls
     async function handleApiCall(url, options) {
         try {
             const response = await fetch(url, options);
@@ -77,29 +86,77 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const data = await response.json();
             if (!response.ok) {
-                // Try to get a more specific error message from the JSON response
                 throw new Error(data.message || `Request failed with status ${response.status}`);
             }
             return data;
         } catch (error) {
             console.error('API call failed:', error);
-            // If the error object itself has a message, use it, otherwise use the generic string version
             throw new Error(error.message || String(error));
         }
     }
 
+    // Helper function to show loading screen
+    function showLoadingScreen(message = "Processing...") {
+        const loadingModal = document.getElementById('loadingModal');
+        const loadingContent = loadingModal.querySelector('.loading-content');
+        loadingContent.querySelector('h3').textContent = message;
+        loadingContent.querySelector('p').textContent = "Please wait while we process your request...";
+        loadingModal.style.display = 'block';
+
+        const progressBar = loadingModal.querySelector('.loading-progress');
+        const steps = loadingModal.querySelectorAll('.step');
+        let currentStep = 0;
+
+        // Reset progress
+        progressBar.style.width = '0%';
+        steps.forEach(step => step.classList.remove('active'));
+        steps[0].classList.add('active');
+
+        // Simulate progress
+        const totalTime = 40000; // 40 seconds
+        const interval = 100; // Update every 100ms
+        const totalSteps = steps.length;
+        const stepTime = totalTime / totalSteps;
+
+        let progress = 0;
+        const timer = setInterval(() => {
+            progress += (interval / totalTime) * 100;
+            if (progress >= 100) {
+                clearInterval(timer);
+            } else {
+                progressBar.style.width = `${progress}%`;
+
+                // Update active step
+                const newStep = Math.floor(progress / (100 / totalSteps));
+                if (newStep !== currentStep) {
+                    steps[currentStep].classList.remove('active');
+                    currentStep = newStep;
+                    steps[currentStep].classList.add('active');
+                }
+            }
+        }, interval);
+
+        return loadingModal;
+    }
+
+    // Helper function to hide loading screen
+    function hideLoadingScreen() {
+        const loadingModal = document.getElementById('loadingModal');
+        loadingModal.style.display = 'none';
+    }
 
     // Generate Travel Tips
     const generateBtn = document.getElementById('generateTravelTips');
     if (generateBtn) {
         generateBtn.addEventListener('click', async function() {
             const btn = this;
-            const originalHtml = btn.innerHTML; // Store original HTML
+            const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span> Generating...';
 
+            const loadingModal = showLoadingScreen("Generating Travel Tips");
+
             try {
-                // Update URL to the new tips generation endpoint
                 await handleApiCall(`/tips/${'{{ trip.id }}'}/generate/`, {
                     method: 'POST',
                     headers: {
@@ -108,17 +165,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Accept': 'application/json'
                     }
                 });
-                // Reload the page to show the new tips
                 window.location.reload();
             } catch (error) {
+                hideLoadingScreen();
                 showAlert(error.message || 'Failed to generate tips.', 'error');
-                // Optional: Redirect to login if error suggests authentication issue
                 if (error.message && (error.message.includes('login') || error.message.includes('Login') || error.message.includes('403'))) {
                     window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
                 }
             } finally {
-                // Restore button state only if generation failed (since success reloads page)
-                if (!btn.disabled) { // Check if button is still disabled (means reload didn't happen)
+                if (!btn.disabled) {
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
                 }
@@ -126,27 +181,306 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Removed: Add custom item modal logic
-    // Removed: Add custom item form submission logic
-    // Removed: Delete Item logic
-    // Removed: Toggle Item Completion logic
-    // Removed: Edit Item logic
-
-    // Keep showAlert function (useful for errors)
     function showAlert(message, type) {
-        // Remove existing alerts first
         document.querySelectorAll('.alert').forEach(a => a.remove());
 
         const alert = document.createElement('div');
-        alert.className = `alert alert-${type}`; // Ensure you have .alert styles in css
+        alert.className = `alert alert-${type}`;
         alert.textContent = message;
         document.body.appendChild(alert);
 
-        // Automatically remove after 5 seconds
         setTimeout(() => {
             alert.remove();
         }, 5000);
     }
 });
 </script>
+
+<style>
+.packing-wrapper {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 2rem;
+}
+
+.packing-container {
+  width: 100%;
+  max-width: 900px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.packing-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,76,36,0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  z-index: -1;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.packing-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.packing-header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.back-link:hover {
+    color: #ff5e41;
+}
+
+.packing-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background: #ff5e41;
+    transform: translateY(-2px);
+}
+
+.category-section {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.category-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.item-list {
+    list-style: none;
+    padding: 0;
+}
+
+.tip-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.tip-item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tip-content {
+    flex: 1;
+}
+
+.tip-text {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: rgba(19, 19, 19, 0.95);
+    backdrop-filter: blur(10px);
+    margin: 10% auto;
+    padding: 2rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.loading-content {
+    text-align: center;
+    max-width: 500px;
+    padding: 2rem;
+}
+
+.loading-content h3 {
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+    font-size: 1.5rem;
+}
+
+.loading-content p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.loading-bar-container {
+    margin: 2rem 0;
+    padding: 0 1rem;
+}
+
+.loading-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.loading-progress {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    border-radius: 4px;
+    transition: width 0.1s linear;
+}
+
+.loading-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding: 0 1rem;
+}
+
+.loading-steps .step {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.3s ease;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    width: 100%;
+    text-align: center;
+}
+
+.loading-steps .step.active {
+    color: var(--color-primary);
+    background: rgba(255, 76, 36, 0.1);
+    border: 1px solid rgba(255, 76, 36, 0.2);
+}
+
+.alert {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    color: white;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alert-error {
+    background: rgba(255, 76, 36, 0.2);
+    border-color: var(--color-primary);
+}
+
+.alert-info {
+    background: rgba(33, 150, 243, 0.2);
+    border-color: #2196F3;
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .packing-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .loading-content {
+        padding: 1.5rem;
+    }
+
+    .loading-steps .step {
+        font-size: 0.85rem;
+        padding: 0.4rem;
+    }
+}
+</style>
 {% endblock %}
