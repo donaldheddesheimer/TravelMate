@@ -4,9 +4,9 @@
 {% block title %}{{ trip.destination }} Weather - TravelMate{% endblock %}
 
 {% block content %}
-<div class="weather-wrapper">
-  <div class="weather-container">
-    <div class="weather-header">
+<div class="packing-wrapper">
+  <div class="packing-container">
+    <div class="packing-header">
       <h1>Weather for {{ trip.destination }}</h1>
       <p>{{ trip.date_leaving|date:"M d, Y" }} to {{ trip.date_returning|date:"M d, Y" }}</p>
       <a href="{% url 'trips:dashboard' trip.id %}" class="back-link">
@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const endDate = "{{ trip.date_returning|date:'Y-m-d' }}";   // Format YYYY-MM-DD
 
     // Construct the API URL using the parameters expected by get_weather_view
-    // Ensure this path matches your urls.py for the get_weather_view
     const apiUrl = `/weather/api/weather/?city=${encodeURIComponent(city)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
 
     console.log("Fetching weather from:", apiUrl);
@@ -41,12 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch(apiUrl)
         .then(response => {
             if (!response.ok) {
-                 // Try to get error message from JSON response body
                 return response.json().then(errData => {
                     throw new Error(errData.error || `HTTP error! status: ${response.status}`);
                 }).catch(() => {
-                    // If response is not JSON or parsing fails, throw generic error
-                     throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 });
             }
             return response.json();
@@ -75,17 +72,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!dailyForecast[dateKey]) {
                     dailyForecast[dateKey] = {
-                        // Display date in local, more readable format
                         displayDate: new Date(item.dt * 1000).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric'
                         }),
                         items: [],
-                        maxTemp: -Infinity, // Initialize for finding max
-                        minTemp: Infinity,  // Initialize for finding min
-                        icons: new Set(), // Use a Set to store unique icons for the day
-                        descriptions: new Set() // Use a Set for unique descriptions
+                        maxTemp: -Infinity,
+                        minTemp: Infinity,
+                        icons: new Set(),
+                        descriptions: new Set()
                     };
                 }
                 dailyForecast[dateKey].items.push(item);
@@ -100,16 +96,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="current-weather">
                     <h2>${weatherData.city.name}</h2>
                     <p>Trip Duration: ${weatherData.trip_duration} days</p>
-                     <p>Forecast for ${Object.keys(dailyForecast).length} day(s)</p>
+                    <p>Forecast for ${Object.keys(dailyForecast).length} day(s)</p>
                 </div>
                 <div class="forecast-header">
                     <h3>Daily Forecast</h3>
                 </div>
                 <div class="daily-forecast">
                     ${Object.values(dailyForecast).map(day => {
-                        // Pick a representative icon (e.g., the first one)
-                        const representativeIcon = day.icons.values().next().value || '01d'; // Default if empty
-                        const representativeDesc = [...day.descriptions].join(', '); // Combine descriptions
+                        const representativeIcon = day.icons.values().next().value || '01d';
+                        const representativeDesc = [...day.descriptions].join(', ');
 
                         return `
                         <div class="forecast-day">
@@ -151,34 +146,53 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* General styles */
-.weather-wrapper {
-    max-width: 1000px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: white; /* Default text color */
+.packing-wrapper {
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 2rem;
 }
 
-.weather-container {
+.packing-container {
+    width: 100%;
+    max-width: 900px;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
     border-radius: 20px;
-    padding: 2rem;
+    padding: 3rem;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    position: relative;
+    overflow: hidden;
 }
 
-.weather-header {
+.packing-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,76,36,0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+    z-index: -1;
+}
+
+.packing-header {
     text-align: center;
     margin-bottom: 2rem;
 }
 
-.weather-header h1 {
+.packing-header h1 {
     font-size: 2.2rem;
     margin-bottom: 0.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.weather-header p {
+.packing-header p {
     color: rgba(255, 255, 255, 0.8);
 }
 
@@ -191,10 +205,13 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .back-link:hover {
-    color: #ff5e41; /* Slightly different hover color */
+    color: #ff5e41;
 }
 
-/* Current Weather / Summary Box */
+.weather-content {
+    margin-top: 2rem;
+}
+
 .current-weather {
     background: rgba(255, 255, 255, 0.08);
     padding: 1.5rem 2rem;
@@ -214,7 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* Forecast Header */
 .forecast-header {
     margin: 2rem 0 1rem 0;
     padding-bottom: 0.5rem;
@@ -226,206 +242,133 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 600;
 }
 
-/* Daily Forecast Grid */
 .daily-forecast {
     display: grid;
     gap: 1.5rem;
-    /* Adjust columns: more space, fewer columns on smaller screens */
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
-/* Individual Forecast Day Card */
 .forecast-day {
     background: rgba(255, 255, 255, 0.05);
     padding: 1.2rem;
     border-radius: 8px;
-    text-align: center;
-    transition: background 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
+    transition: transform 0.3s ease, background 0.3s ease;
 }
 
 .forecast-day:hover {
+    transform: translateY(-2px);
     background: rgba(255, 255, 255, 0.1);
 }
 
 .forecast-date {
     font-weight: 600;
     margin-bottom: 0.5rem;
-    font-size: 1rem;
-}
-
-.forecast-day img {
-    width: 60px; /* Slightly larger icon */
-    height: 60px;
-    margin: 0.5rem auto;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    color: var(--color-primary);
 }
 
 .forecast-temp {
-    margin: 0.5rem 0;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 500;
+    margin: 0.5rem 0;
 }
 
 .forecast-desc {
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
-    text-transform: capitalize;
-    margin-bottom: 1rem;
-    min-height: 2.5em; /* Allow space for multiple descriptions */
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
 }
 
-/* Hourly Forecast Details */
 .hourly-details {
-    margin-top: auto; /* Push details/summary to the bottom */
+    margin-top: 1rem;
 }
 
 .hourly-details summary {
     cursor: pointer;
-    font-weight: 500;
     color: var(--color-primary);
-    padding: 0.3rem 0;
+    font-weight: 500;
+    padding: 0.5rem;
     border-radius: 4px;
-    transition: background 0.2s;
-    display: inline-block; /* Allow centering */
+    transition: background 0.3s ease;
 }
 
 .hourly-details summary:hover {
-    text-decoration: underline;
+    background: rgba(255, 76, 36, 0.1);
 }
 
 .hourly-forecast {
-    display: flex;
-    gap: 1rem; /* Increased gap */
-    margin-top: 0.8rem;
-    overflow-x: auto; /* Enable horizontal scroll */
-    padding: 0.5rem 0.2rem 0.8rem 0.2rem; /* Add padding for scrollbar */
-    /* Custom scrollbar styles (optional) */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-/* Webkit scrollbar styles */
-.hourly-forecast::-webkit-scrollbar {
-  height: 6px;
-}
-.hourly-forecast::-webkit-scrollbar-track {
-  background: transparent;
-}
-.hourly-forecast::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-
-.hourly-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 65px; /* Wider items */
-    font-size: 0.8rem;
-    text-align: center;
-    background: rgba(0, 0, 0, 0.1); /* Slight background for items */
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1rem;
     padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 6px;
 }
 
-.hourly-item p {
-    margin: 0.1rem 0;
+.hourly-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
 }
 
-.hourly-item img {
-    width: 35px; /* Slightly larger hourly icon */
-    height: 35px;
-    margin: 0.2rem auto;
+.weather-error {
+    background: rgba(255, 76, 36, 0.1);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-primary);
+    text-align: center;
 }
 
-/* Loading Spinner */
+.weather-error h2 {
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+}
+
+.weather-error p {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
 .loading-spinner {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 3rem;
-    min-height: 200px;
+    gap: 1rem;
+    padding: 2rem;
 }
 
 .spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.2); /* Adjusted border */
-    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.1);
     border-top-color: var(--color-primary);
-    animation: spin 1s ease-in-out infinite;
-    margin-bottom: 1rem;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
-
-.loading-spinner p {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* Error Message Styling */
-.weather-error {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    text-align: center;
-    background: rgba(255, 107, 107, 0.1); /* Light red background */
-    border: 1px solid rgba(255, 107, 107, 0.3); /* Light red border */
-    border-radius: 12px;
-    color: #ffcbcb; /* Lighter red text */
-}
-
-.weather-error h2 {
-    color: #ff6b6b; /* Stronger red for title */
-    margin-bottom: 1rem;
-}
-.weather-error p {
-    margin: 0.3rem 0;
-}
-.weather-error i {
-    color: rgba(255, 204, 204, 0.8); /* Softer color for error message detail */
-}
-
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .daily-forecast {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 1rem;
-    }
-    .weather-container {
-        padding: 1.5rem;
-    }
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .packing-container {
+        padding: 2rem;
+    }
+
     .daily-forecast {
-        /* Stack days vertically on very small screens */
         grid-template-columns: 1fr;
     }
-     .weather-header h1 {
-        font-size: 1.8rem;
-    }
-    .current-weather {
-        padding: 1rem 1.5rem;
-    }
-    .current-weather h2 {
-        font-size: 1.5rem;
-    }
-    .forecast-day {
-        padding: 1rem;
-    }
+
     .hourly-item {
-        min-width: 60px;
+        grid-template-columns: 1fr 1fr 1fr;
     }
 }
 </style>
