@@ -122,6 +122,71 @@
         </form>
       </div>
     </div>
+
+    <!-- Edit Item Modal (Hidden by default) -->
+    <div id="editItemModal" class="modal">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Edit Item</h3>
+        <form id="editItemForm">
+          <div class="form-group">
+            <label for="editItemName">Item Name</label>
+            <input type="text" id="editItemName" required>
+          </div>
+          <div class="form-group">
+            <label for="editItemCategory">Category</label>
+            <select id="editItemCategory" required>
+              {% for value, label in category_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editItemQuantity">Quantity</label>
+            <input type="number" id="editItemQuantity" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="editItemNotes">Notes</label>
+            <textarea id="editItemNotes" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="editItemEssential">
+              <span class="checkbox-custom"></span>
+              Essential Item
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('editItemModal').style.display='none'">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6L9 17l-5-5"></path>
+              </svg>
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+      <div class="modal-content loading-content">
+        <h3>Generating Your Packing List</h3>
+        <p>Please wait while we process your request...</p>
+        <div class="loading-bar-container">
+          <div class="loading-bar">
+            <div class="loading-progress"></div>
+          </div>
+          <div class="loading-steps">
+            <span class="step active">Analyzing trip details</span>
+            <span class="step">Checking weather</span>
+            <span class="step">Generating items</span>
+            <span class="step">Finalizing list</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -152,11 +217,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Helper function to show loading screen
+    function showLoadingScreen(message = "Processing...") {
+        const loadingModal = document.getElementById('loadingModal');
+        const loadingContent = loadingModal.querySelector('.loading-content');
+        loadingContent.querySelector('h3').textContent = message;
+        loadingContent.querySelector('p').textContent = "Please wait while we process your request...";
+        loadingModal.style.display = 'block';
+
+        const progressBar = loadingModal.querySelector('.loading-progress');
+        const steps = loadingModal.querySelectorAll('.step');
+        let currentStep = 0;
+
+        // Reset progress
+        progressBar.style.width = '0%';
+        steps.forEach(step => step.classList.remove('active'));
+        steps[0].classList.add('active');
+
+        // Simulate progress
+        const totalTime = 40000; // 40 seconds
+        const interval = 100; // Update every 100ms
+        const totalSteps = steps.length;
+        const stepTime = totalTime / totalSteps;
+
+        let progress = 0;
+        const timer = setInterval(() => {
+            progress += (interval / totalTime) * 100;
+            if (progress >= 100) {
+                clearInterval(timer);
+            } else {
+                progressBar.style.width = `${progress}%`;
+
+                // Update active step
+                const newStep = Math.floor(progress / (100 / totalSteps));
+                if (newStep !== currentStep) {
+                    steps[currentStep].classList.remove('active');
+                    currentStep = newStep;
+                    steps[currentStep].classList.add('active');
+                }
+            }
+        }, interval);
+
+        return loadingModal;
+    }
+
+    // Helper function to hide loading screen
+    function hideLoadingScreen() {
+        const loadingModal = document.getElementById('loadingModal');
+        loadingModal.style.display = 'none';
+    }
+
     // Generate Packing List
     document.getElementById('generatePackingList').addEventListener('click', async function() {
         const btn = this;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Generating...';
+
+        const loadingModal = showLoadingScreen("Generating Your Packing List");
 
         try {
             await handleApiCall(`/packing/${'{{ trip.id }}'}/generate/`, {
@@ -169,6 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             window.location.reload();
         } catch (error) {
+            hideLoadingScreen();
             showAlert(error.message, 'error');
 
             // If it's a redirect to login, redirect properly
@@ -220,6 +338,8 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Adding...';
 
+        const loadingModal = showLoadingScreen("Adding Item");
+
         const formData = {
             name: document.getElementById('itemName').value.trim(),
             category: document.getElementById('itemCategory').value,
@@ -242,10 +362,101 @@ document.addEventListener('DOMContentLoaded', function() {
             form.reset();
             window.location.reload();
         } catch (error) {
+            hideLoadingScreen();
             showAlert(error.message, 'error');
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Add Item';
+        }
+    });
+
+    // Edit Item functionality
+    document.querySelectorAll('.edit-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const item = this.closest('.item');
+            const itemId = item.dataset.id;
+
+            // Get current item details
+            const name = item.querySelector('.item-name').textContent;
+            const quantity = parseInt(item.querySelector('.item-quantity').textContent.replace('x', ''));
+            const category = item.closest('.category-section').querySelector('h3').textContent;
+            const notes = item.querySelector('.item-notes')?.textContent || '';
+            const isEssential = item.classList.contains('essential');
+
+            // Populate edit form
+            document.getElementById('editItemName').value = name;
+            document.getElementById('editItemQuantity').value = quantity;
+            document.getElementById('editItemCategory').value = category.toUpperCase().replace(' ', '_');
+            document.getElementById('editItemNotes').value = notes;
+            document.getElementById('editItemEssential').checked = isEssential;
+
+            // Store item ID in form
+            document.getElementById('editItemForm').dataset.itemId = itemId;
+
+            // Show edit modal
+            const editModal = document.getElementById('editItemModal');
+            editModal.style.display = 'block';
+            document.getElementById('editItemName').focus();
+        });
+    });
+
+    // Handle edit form submission
+    document.getElementById('editItemForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const form = this;
+        const itemId = form.dataset.itemId;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const loadingModal = showLoadingScreen("Saving Changes");
+
+        const formData = {
+            name: document.getElementById('editItemName').value.trim(),
+            category: document.getElementById('editItemCategory').value,
+            quantity: parseInt(document.getElementById('editItemQuantity').value) || 1,
+            is_essential: document.getElementById('editItemEssential').checked,
+            notes: document.getElementById('editItemNotes').value.trim()
+        };
+
+        try {
+            const data = await handleApiCall(`/packing/item/${itemId}/edit/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const editModal = document.getElementById('editItemModal');
+            editModal.style.display = 'none';
+            window.location.reload();
+        } catch (error) {
+            hideLoadingScreen();
+            showAlert(error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Changes';
+        }
+    });
+
+    // Close edit modal
+    document.querySelectorAll('#editItemModal .close-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const editModal = document.getElementById('editItemModal');
+            editModal.style.display = 'none';
+            document.getElementById('editItemForm').reset();
+        });
+    });
+
+    // Close edit modal when clicking outside
+    window.addEventListener('click', (event) => {
+        const editModal = document.getElementById('editItemModal');
+        if (event.target === editModal) {
+            editModal.style.display = 'none';
+            document.getElementById('editItemForm').reset();
         }
     });
 
@@ -254,6 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', async function() {
             const itemId = this.closest('.item').dataset.id;
             if (confirm('Are you sure you want to delete this item?')) {
+                const loadingModal = showLoadingScreen("Deleting Item");
                 try {
                     await handleApiCall(`/packing/item/${itemId}/update/`, {
                         method: 'DELETE',
@@ -263,6 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     window.location.reload();
                 } catch (error) {
+                    hideLoadingScreen();
                     showAlert(error.message, 'error');
                 }
             }
@@ -275,6 +488,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemId = this.closest('.item').dataset.id;
             const isChecked = this.checked;
 
+            const loadingModal = showLoadingScreen("Updating Item");
+
             try {
                 const data = await handleApiCall(`/packing/item/${itemId}/toggle/`, {
                     method: 'POST',
@@ -285,18 +500,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 this.closest('.item').classList.toggle('completed', data.completed);
+                hideLoadingScreen();
             } catch (error) {
+                hideLoadingScreen();
                 showAlert(error.message, 'error');
                 this.checked = !this.checked; // Revert checkbox state
             }
-        });
-    });
-
-    // Edit Item (placeholder for future implementation)
-    document.querySelectorAll('.edit-item').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = this.closest('.item').dataset.id;
-            showAlert('Edit functionality coming soon!', 'info');
         });
     });
 
@@ -312,4 +521,576 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<style>
+.packing-wrapper {
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 2rem;
+    color: white;
+}
+
+.packing-container {
+    width: 100%;
+    max-width: 900px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 3rem;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.packing-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,76,36,0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+    z-index: -1;
+}
+
+.packing-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.packing-header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.back-link:hover {
+    color: #ff5e41;
+}
+
+.packing-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background: #ff5e41;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.category-section {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.category-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.category-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.item-list {
+    list-style: none;
+    padding: 0;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.item:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.item.essential {
+    background: rgba(255, 76, 36, 0.1);
+    border-left: 4px solid var(--color-primary);
+}
+
+.item.completed {
+    opacity: 0.7;
+}
+
+.item-checkbox-wrapper {
+    margin-right: 1rem;
+    position: relative;
+}
+
+.item-checkbox {
+    opacity: 0;
+    position: absolute;
+}
+
+.checkmark {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.item-checkbox:checked ~ .checkmark {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.item-checkbox:checked ~ .checkmark:after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.item-details {
+    flex: 1;
+}
+
+.item-name {
+    font-weight: 500;
+}
+
+.item-quantity, .item-day, .item-notes {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-left: 0.5rem;
+}
+
+.item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.25rem;
+    transition: color 0.3s ease;
+}
+
+.btn-action:hover {
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: rgba(19, 19, 19, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    margin: 10% auto;
+    padding: 2.5rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.close-modal {
+    position: absolute;
+    right: 1.5rem;
+    top: 1.5rem;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.close-modal:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(255, 76, 36, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.5rem 0;
+}
+
+.checkbox-custom {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    margin-right: 0.75rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkbox-label input[type="checkbox"]:checked ~ .checkbox-custom {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.checkbox-label input[type="checkbox"]:checked ~ .checkbox-custom:after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background: #ff5e41;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 76, 36, 0.3);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.alert {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    color: white;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.alert-error {
+    background: rgba(255, 76, 36, 0.2);
+    border-color: var(--color-primary);
+}
+
+.alert-info {
+    background: rgba(33, 150, 243, 0.2);
+    border-color: #2196F3;
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-content {
+    background: rgba(19, 19, 19, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.loading-content h3 {
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+}
+
+.loading-content p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2rem;
+}
+
+.loading-bar-container {
+    margin: 2rem 0;
+}
+
+.loading-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.loading-progress {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    border-radius: 4px;
+    transition: width 0.1s linear;
+}
+
+.loading-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+}
+
+.loading-steps .step {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.3s ease;
+}
+
+.loading-steps .step.active {
+    color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+    .packing-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .loading-steps {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-content {
+        margin: 5% auto;
+        padding: 1.5rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
 {% endblock %}
