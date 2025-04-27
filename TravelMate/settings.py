@@ -175,6 +175,7 @@ OWM_API_KEY = os.getenv('OWM_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 GEOCODE_API_KEY = os.getenv('GEOCODE_API_KEY')
+OPENROUTER_MODEL = "google/gemini-2.5-flash-preview"
 
 # Logging configuration
 LOGGING = {

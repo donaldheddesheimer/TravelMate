@@ -1,6 +1,7 @@
 # api/services/tips.py
 
 import json
+import codecs
 import logging
 from django.conf import settings
 from openai import OpenAI, OpenAIError
@@ -40,7 +41,7 @@ class TravelTipsGenerator:
             logger.error(f"Failed to initialize OpenAI client for OpenRouter: {e}", exc_info=True)
             return json.dumps({"error": f"Failed to initialize AI client: {e}"})
 
-        model_name = "deepseek/deepseek-chat-v3-0324:free"
+        model_name = getattr(settings, 'OPENROUTER_MODEL', "deepseek/deepseek-chat-v3-0324:free")
 
         # --- Updated Prompt for Travel Tips ---
         prompt = f"""Create a list of helpful travel tips in JSON format for a trip to {trip.destination} from {trip.date_leaving.strftime('%Y-%m-%d')} to {trip.date_returning.strftime('%Y-%m-%d')}.
@@ -87,7 +88,7 @@ Example JSON structure:
     ]
 }}
 
-Generate the travel tips now based on the trip details. Ensure the output is ONLY the JSON object.
+Generate the travel tips now based on the trip details. Ensure the output is ONLY the JSON object. Do not use bracketed placeholders like [Number].
 """
 
         try:
@@ -100,33 +101,57 @@ Generate the travel tips now based on the trip details. Ensure the output is ONL
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7, # Slightly higher temperature for potentially more varied tips
-                max_tokens=1000, # Adjust as needed
+                max_tokens=2000, # Adjust as needed
                 extra_headers=extra_headers
             )
 
             content = completion.choices[0].message.content.strip()
 
-            # --- JSON Cleaning/Extraction (same logic as before) ---
+            # --- JSON Cleaning/Extraction ---
             if content.startswith("```json"):
                 content = content[7:]
             if content.endswith("```"):
                 content = content[:-3]
             content = content.strip()
 
-            if not (content.startswith('{') and content.endswith('}')):
-                 logger.warning(f"OpenRouter ({model_name}) response for trip {trip.id} (tips) doesn't look like JSON: {content[:100]}...")
-                 json_start = content.find('{')
-                 json_end = content.rfind('}')
-                 if json_start != -1 and json_end != -1 and json_start < json_end:
-                     content = content[json_start:json_end+1]
-                     logger.info(f"Extracted potential JSON from OpenRouter response for trip {trip.id} (tips)")
-                 else:
-                     logger.error(f"Could not extract valid JSON from OpenRouter response for trip {trip.id} (tips)")
-                     return json.dumps({"error": "AI response was not in the expected JSON format."})
-            # --------------------------------------------------------
+            # Handle potential leading/trailing junk (like the ']' seen in the warning)
+            json_start = content.find('{')
+            json_end = content.rfind('}')
+            if json_start != -1 and json_end != -1 and json_start < json_end:
+                content = content[json_start:json_end + 1]
+                logger.info(f"Extracted potential JSON block for trip {trip.id} (tips)")
+            else:
+                # If we can't even find a { } block, it's definitely not JSON
+                logger.error(
+                    f"Could not extract valid JSON block from OpenRouter response for trip {trip.id} (tips). Content: {content[:200]}")
+                return json.dumps({"error": "AI response did not contain a recognizable JSON structure."})
 
-            logger.info(f"Received travel tips response from OpenRouter for trip {trip.id}")
-            return content
+            # --- Attempt to parse the JSON *here* to validate ---
+            try:
+                # First, try direct parsing
+                parsed_data = json.loads(content)
+                logger.info(f"Successfully parsed direct JSON response from OpenRouter for trip {trip.id}")
+                # If successful, return the original *valid* JSON string
+                return content
+            except json.JSONDecodeError as e1:
+                logger.warning(
+                    f"Direct JSON parsing failed for trip {trip.id}: {e1}. Trying unicode_escape decoding...")
+                # If direct parsing fails, *try* unescaping (handles the \")
+                try:
+                    unescaped_content = codecs.decode(content, 'unicode_escape')
+                    # Validate that the unescaped version IS valid JSON
+                    parsed_data = json.loads(unescaped_content)
+                    logger.info(f"Successfully parsed unicode_escaped JSON response from OpenRouter for trip {trip.id}")
+                    # If successful, return the *unescaped* valid JSON string
+                    return unescaped_content
+                except (json.JSONDecodeError, UnicodeDecodeError, Exception) as e2:
+                    logger.error(f"Failed to parse JSON even after unicode_escape for trip {trip.id}: {e2}",
+                                 exc_info=True)
+                    logger.error(f"Original content: {content[:500]}")
+                    logger.error(
+                        f"Unescaped content attempt: {unescaped_content[:500] if 'unescaped_content' in locals() else 'N/A'}")
+                    return json.dumps(
+                        {"error": "AI response was received but could not be parsed as valid JSON after attempts."})
 
         except OpenAIError as e:
             logger.error(f"OpenRouter API error ({model_name}) during tips generation for trip {trip.id}: {e}", exc_info=True)
