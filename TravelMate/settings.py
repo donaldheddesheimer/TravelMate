@@ -30,6 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'travelmate-jv1d.onrender.com',
+    '0.0.0.0'
 ]
 
 
