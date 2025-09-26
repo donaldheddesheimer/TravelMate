@@ -16,13 +16,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-852=*-+v#vj#e842$#3*gqa+dt0qb4v93!6k6pd6#05#cz%k4-')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
-    'travelmate-jv1d.onrender.com',
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
+    'testserver',
+    '.railway.app',
+    '.herokuapp.com',
+    '.vercel.app',
     '.onrender.com',
 ]
 
