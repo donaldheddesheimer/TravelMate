@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 # Collect static files
 echo "📁 Collecting static files..."
-python manage.py collectstatic --settings=TravelMate.settings_production --noinput
+python manage.py collectstatic --settings=TravelMate.settings_production --noinput clear
 
 # Run database migrations
 echo "🗄️ Running database migrations..."
