@@ -27,8 +27,7 @@ ALLOWED_HOSTS = [
     '.herokuapp.com',
     '.vercel.app',
     '.render.com',
-    # Add your custom domain here
-    # 'yourdomain.com',
+    'travelmate-jv1d.onrender.com'
 ]
 
 # Application definition
