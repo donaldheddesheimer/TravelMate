@@ -81,19 +81,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "TravelMate.wsgi.application"
 
-# Database - Use PostgreSQL if available, fallback to SQLite
-if os.getenv('DATABASE_URL'):
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
+# Database - Use SQLite for now (PostgreSQL has Python 3.13 compatibility issues)
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
+
+# Uncomment this when you want to use PostgreSQL with Python 3.12 or earlier
+# if os.getenv('DATABASE_URL'):
+#     import dj_database_url
+#     DATABASES = {
+#         'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
+#     }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
