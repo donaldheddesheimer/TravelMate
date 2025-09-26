@@ -29,7 +29,11 @@ SECRET_KEY = "django-insecure-852=*-+v#vj#e842$#3*gqa+dt0qb4v93!6k6pd6#05#cz%k4-
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    '0.0.0.0'
+    'travelmate-jv1d.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '.onrender.com',  # This will allow any Render subdomain
 ]
 
 
