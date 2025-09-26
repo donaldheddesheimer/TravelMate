@@ -119,7 +119,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'  # This is CRITICAL
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # WhiteNoise configuration
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
