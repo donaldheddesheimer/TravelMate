@@ -8,7 +8,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 class DeepSeekService: # Consider renaming if not using DeepSeek models primarily
-    MODEL = getattr(settings, 'OPENROUTER_CHAT_MODEL', "google/gemini-2.5-flash-preview")
+    MODEL = getattr(settings, 'OPENROUTER_CHAT_MODEL', "google/gemini-2.5-flash-preview-09-2025")
     BASE_URL = getattr(settings, 'OPENROUTER_BASE_URL', "https://openrouter.ai/api/v1") + "/chat/completions"
     # Default max_tokens value - can be overridden by settings or method call
     DEFAULT_MAX_TOKENS = getattr(settings, 'OPENROUTER_CHAT_DEFAULT_MAX_TOKENS', 5000) # Added default
