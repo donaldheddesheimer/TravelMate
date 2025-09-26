@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![TravelMate Logo](<img width="2834" height="1292" alt="image" src="https://github.com/user-attachments/assets/892e5eef-fbc6-40f0-b6cc-a3696fe07f8d" />
-)
+<img width="2834" height="1292" alt="image" src="https://github.com/user-attachments/assets/182e48a0-1689-475c-a8ef-6419e508b1fe" />
+
 
 **Your Smart Travel Planning Companion**
 
